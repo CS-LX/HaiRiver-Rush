@@ -1,6 +1,16 @@
 -- ============================================================
---  track.lua  —  无限程序化河道赛道
---  负责：瓦片网格构建、弯道段生成、回收、中心线查询
+--  track.lua  —  预烘焙封闭椭圆环形赛道
+--  ┌──────────────────────────────────────────────────────┐
+--  │  赛道形状：标准跑道（stadium）形椭圆               │
+--  │  LOOP_SEGS = {                                       │
+--  │    { tiles=60, dh=0.0 },  -- 直道 600 m             │
+--  │    { tiles=30, dh=6.0 },  -- 右弯 180°(6°/tile)    │
+--  │    { tiles=60, dh=0.0 },  -- 直道 600 m             │
+--  │    { tiles=30, dh=6.0 },  -- 右弯 180°              │
+--  │  }                                                   │
+--  │  共 180 瓦片，周长 ~1800 m，宽 ~189 m，长 ~610 m   │
+--  │  数学验证封闭：回到 (0,0) 朝向 0° ✓               │
+--  └──────────────────────────────────────────────────────┘
 -- ============================================================
 local C = require "config"
 local S = require "state"
@@ -8,55 +18,60 @@ local U = require "utils"
 
 local M = {}
 
--- 前方最少保持的看前距离（超出时补充新段）
-local LOOK_AHEAD = 180.0
+-- ─────────────────────────────────────────────────────────────
+--  环形路径定义
+-- ─────────────────────────────────────────────────────────────
+local LOOP_SEGS = {
+    { tiles = 60, dh = 0.0 },  -- 直道
+    { tiles = 30, dh = 6.0 },  -- 右弯 180°
+    { tiles = 60, dh = 0.0 },  -- 直道
+    { tiles = 30, dh = 6.0 },  -- 右弯 180°
+}
 
--- 瓦片 Z 方向放大系数：消除弯道拼接缝隙（水面 / 堤坝分开控制）
-local WATER_OVERLAP = 1.10   -- 水面横向稍微重叠
-local WALL_OVERLAP  = 1.30   -- 堤坝更大重叠，彻底封堵角落
+local LOOP_N       = 0           -- 总瓦片数（烘焙后 = 180）
+local loopNodes    = {}          -- { x, z, heading } 中心线节点数组（长度 LOOP_N）
+local loopTiles    = {}          -- 场景节点数组（永久存在，不回收）
+local currentIdx   = 1           -- 船当前所在节点索引
+local lapStartZ    = 0.0         -- 第 0 号节点的 Z，用于圈数检测
+
+-- 重叠系数（消除瓦片拼接缝隙）
+local WATER_OVERLAP = 1.10
+local WALL_OVERLAP  = 1.30
 
 -- ─────────────────────────────────────────────────────────────
---  内部：构建一个瓦片节点（水面 + 左岸 + 右岸）
---  堤坝附加 RigidBody(静态) + CollisionShape，碰撞层 = 4
---  注意：瓦片节点默认 disabled，由 AppendTile 在设置好位置后 enable
+--  内部：构建一个瓦片节点（复用旧逻辑；默认 disabled）
 -- ─────────────────────────────────────────────────────────────
 local function CreateTileNode()
     local root = S.mainScene:CreateChild("Tile")
     root:SetEnabled(false)
 
-    -- ── 水面平面 ─────────────────────────────────────────────
+    -- 水面
     local water = root:CreateChild("W")
     local wMdl  = water:CreateComponent("StaticModel")
     wMdl:SetModel(cache:GetResource("Model", "Models/Plane.mdl"))
     wMdl:SetMaterial(U.MakeMaterial(0.04, 0.42, 0.62))
-    -- Z 方向稍微拉长消除接缝
     water:SetScale(Vector3(C.TRACK_WIDTH, 1.0, C.TILE_LEN * WATER_OVERLAP))
 
-    -- ── 左岸堤坝 ─────────────────────────────────────────────
-    local lw     = root:CreateChild("LW")
-    local lwMdl  = lw:CreateComponent("StaticModel")
+    -- 左岸
+    local lw    = root:CreateChild("LW")
+    local lwMdl = lw:CreateComponent("StaticModel")
     lwMdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
     lwMdl:SetMaterial(U.MakeMaterial(0.38, 0.55, 0.22))
     lw:SetScale(Vector3(C.WALL_W, C.WALL_H, C.TILE_LEN * WALL_OVERLAP))
     lw:SetPosition(Vector3(-(C.TRACK_WIDTH * 0.5 + C.WALL_W * 0.5), C.WALL_H * 0.5, 0))
-
-    -- 左岸物理碰撞（静态刚体，碰撞层 4 = 堤岸）
     local lwRb  = lw:CreateComponent("RigidBody")
     lwRb:SetMass(0)
     lwRb:SetCollisionLayerAndMask(4, 1)
     local lwCol = lw:CreateComponent("CollisionShape")
-    -- SetBox 尺寸为节点本地空间（1×1×1），实际物理尺寸由 SetScale 决定
     lwCol:SetBox(Vector3(1, 1, 1), Vector3.ZERO, Quaternion.IDENTITY)
 
-    -- ── 右岸堤坝 ─────────────────────────────────────────────
-    local rw     = root:CreateChild("RW")
-    local rwMdl  = rw:CreateComponent("StaticModel")
+    -- 右岸
+    local rw    = root:CreateChild("RW")
+    local rwMdl = rw:CreateComponent("StaticModel")
     rwMdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
     rwMdl:SetMaterial(U.MakeMaterial(0.38, 0.55, 0.22))
     rw:SetScale(Vector3(C.WALL_W, C.WALL_H, C.TILE_LEN * WALL_OVERLAP))
     rw:SetPosition(Vector3(C.TRACK_WIDTH * 0.5 + C.WALL_W * 0.5, C.WALL_H * 0.5, 0))
-
-    -- 右岸物理碰撞
     local rwRb  = rw:CreateComponent("RigidBody")
     rwRb:SetMass(0)
     rwRb:SetCollisionLayerAndMask(4, 1)
@@ -67,160 +82,151 @@ local function CreateTileNode()
 end
 
 -- ─────────────────────────────────────────────────────────────
---  内部：追加一块瓦片到赛道末端
---  关键：先设置位置再 Enable，确保物理体在正确位置激活
+--  内部：烘焙整条封闭环形路径
+--  计算所有 loopNodes，然后按中点放置瓦片
 -- ─────────────────────────────────────────────────────────────
-local function AppendTile(prevX, prevZ, heading)
-    local midX = (prevX + S.trackEndX) * 0.5
-    local midZ = (prevZ + S.trackEndZ) * 0.5
+local function BakeLoop()
+    loopNodes = {}
+    loopTiles = {}
+    LOOP_N    = 0
 
-    -- 从池中取或新建（先不 enable）
-    local tile
-    if #S.tilePool > 0 then
-        tile = table.remove(S.tilePool)
-    else
-        tile = CreateTileNode()
+    -- 第一遍：计算所有中心线节点（末端位置）
+    local cx      = 0.0
+    local cz      = 0.0
+    local heading = 0.0
+
+    for _, seg in ipairs(LOOP_SEGS) do
+        for _ = 1, seg.tiles do
+            heading = heading + seg.dh
+            local rad = math.rad(heading)
+            cx = cx + math.sin(rad) * C.TILE_LEN
+            cz = cz + math.cos(rad) * C.TILE_LEN
+            LOOP_N = LOOP_N + 1
+            loopNodes[LOOP_N] = { x = cx, z = cz, heading = heading }
+        end
     end
 
-    -- 先设置变换，再 enable——保证静态物理体在正确世界位置初始化
-    tile:SetPosition(Vector3(midX, -0.05, midZ))
-    tile:SetRotation(Quaternion(0, heading, 0))
-    tile:SetEnabled(true)
+    U.LogInfo(string.format("[Track] 路径节点数=%d  末端(%.1f, %.1f) 朝向=%.1f°",
+        LOOP_N, cx, cz, heading % 360))
 
-    table.insert(S.trackMeshes, { node = tile, endZ = S.trackEndZ })
+    -- 第二遍：在相邻节点中点放置瓦片
+    -- 节点 i 的瓦片放在节点 i-1 与节点 i 的中点
+    -- 节点 0（虚拟起始点）= (0, 0)
+    local prevX = 0.0
+    local prevZ = 0.0
+
+    for i = 1, LOOP_N do
+        local n    = loopNodes[i]
+        local midX = (prevX + n.x) * 0.5
+        local midZ = (prevZ + n.z) * 0.5
+
+        local tile = CreateTileNode()
+        -- 先设位置再 Enable，保证静态物理体在正确位置初始化
+        tile:SetPosition(Vector3(midX, -0.05, midZ))
+        tile:SetRotation(Quaternion(0, n.heading, 0))
+        tile:SetEnabled(true)
+
+        loopTiles[i] = tile
+
+        prevX = n.x
+        prevZ = n.z
+    end
+
+    lapStartZ = 0.0   -- 起始 Z，用于圈数检测
+    currentIdx = 1
+
+    -- 同步旧接口需要的 state 字段（障碍物/金币系统可能读取）
+    S.trackPath       = loopNodes
+    S.trackEndX       = loopNodes[LOOP_N].x
+    S.trackEndZ       = loopNodes[LOOP_N].z
+    S.trackEndHeading = loopNodes[LOOP_N].heading
 end
 
-local function RecycleTile(n)
-    n:SetEnabled(false)
-    table.insert(S.tilePool, n)
-end
+-- ─────────────────────────────────────────────────────────────
+--  内部：更新 currentIdx（每帧调用）
+--  在窗口 [-3, +20] 内找到离船最近的节点
+-- ─────────────────────────────────────────────────────────────
+local function UpdateCurrentIdx(boatX, boatZ)
+    if LOOP_N == 0 then return end
 
--- ─────────────────────────────────────────────────────────────
---  内部：生成一段赛道（若干块瓦片 + 对应中心线节点）
--- ─────────────────────────────────────────────────────────────
-local function GenerateSegment()
-    local r = math.random(4)
-    -- 直道 50%，左弯 25%，右弯 25%
-    local turnPerTile = 0.0
-    if r == 3 then
-        turnPerTile = -C.CURVE_ANGLE / C.TILES_PER_SEG   -- 左弯
-    elseif r == 4 then
-        turnPerTile =  C.CURVE_ANGLE / C.TILES_PER_SEG   -- 右弯
+    local bestDist = math.huge
+    local bestIdx  = currentIdx
+
+    -- 扫描前后窗口，避免全量搜索
+    local SCAN_BACK  = 3
+    local SCAN_FRONT = 20
+
+    for offset = -SCAN_BACK, SCAN_FRONT do
+        local idx = ((currentIdx - 1 + offset) % LOOP_N) + 1
+        local n   = loopNodes[idx]
+        local dx  = boatX - n.x
+        local dz  = boatZ - n.z
+        local d2  = dx * dx + dz * dz
+        if d2 < bestDist then
+            bestDist = d2
+            bestIdx  = idx
+        end
     end
 
-    for i = 1, C.TILES_PER_SEG do
-        S.trackEndHeading = S.trackEndHeading + turnPerTile
-        local heading = S.trackEndHeading
-        local rad     = math.rad(heading)
-
-        local prevX = S.trackEndX
-        local prevZ = S.trackEndZ
-
-        -- 沿朝向前进一个瓦片
-        S.trackEndX = S.trackEndX + math.sin(rad) * C.TILE_LEN
-        S.trackEndZ = S.trackEndZ + math.cos(rad) * C.TILE_LEN
-
-        -- 记录中心线节点（末端位置）
-        table.insert(S.trackPath, {
-            x       = S.trackEndX,
-            z       = S.trackEndZ,
-            heading = heading,
-        })
-
-        AppendTile(prevX, prevZ, heading)
+    -- 检测是否完成一圈（从末尾索引跨回索引 1）
+    if bestIdx < currentIdx - SCAN_BACK and currentIdx > LOOP_N - SCAN_FRONT then
+        S.lapCount = S.lapCount + 1
+        U.LogInfo("[Track] 完成第 " .. S.lapCount .. " 圈")
     end
+
+    currentIdx = bestIdx
 end
 
 -- ─────────────────────────────────────────────────────────────
 --  公共接口
 -- ─────────────────────────────────────────────────────────────
 
--- 找距离 (x, z) 最近的中心线节点（用于碰墙检测备用查询）
+-- 找 boatZ 前方 distAhead 处的中心线节点（障碍物/金币生成用）
+-- 保持旧签名以兼容 obstacles.lua / coins.lua
+function M.GetNodeAhead(boatZ, distAhead)
+    if LOOP_N == 0 then return nil end
+    local tilesAhead = math.max(1, math.floor(distAhead / C.TILE_LEN))
+    local idx = ((currentIdx - 1 + tilesAhead) % LOOP_N) + 1
+    return loopNodes[idx]
+end
+
+-- 找离 (x, z) 最近的中心线节点（boatphys 碰墙检测备用）
 function M.GetNearestNode(x, z)
-    if #S.trackPath == 0 then return nil end
+    if LOOP_N == 0 then return nil end
     local best     = nil
     local bestDist = math.huge
-    local startIdx = math.max(1, #S.trackPath - 30)
-    for i = startIdx, #S.trackPath do
-        local n  = S.trackPath[i]
-        local dx = x - n.x
-        local dz = z - n.z
-        local d  = dx * dx + dz * dz
-        if d < bestDist then
-            bestDist = d
+    -- 在 currentIdx 附近扫描，足够覆盖碰撞检测需求
+    for offset = -5, 10 do
+        local idx = ((currentIdx - 1 + offset) % LOOP_N) + 1
+        local n   = loopNodes[idx]
+        local dx  = x - n.x
+        local dz  = z - n.z
+        local d2  = dx * dx + dz * dz
+        if d2 < bestDist then
+            bestDist = d2
             best     = n
         end
     end
     return best
 end
 
--- 找位于 boatZ 前方 distAhead 处的中心线节点（障碍物/金币生成用）
-function M.GetNodeAhead(boatZ, distAhead)
-    local targetZ = boatZ + distAhead
-    if #S.trackPath == 0 then return nil end
-    local best     = nil
-    local bestDiff = math.huge
-    for i = 1, #S.trackPath do
-        local n    = S.trackPath[i]
-        local diff = math.abs(n.z - targetZ)
-        if diff < bestDiff then
-            bestDiff = diff
-            best     = n
-        end
-    end
-    return best
-end
-
--- 初始化：预生成若干段
+-- 初始化：烘焙封闭环形赛道（只在游戏启动时调用一次）
 function M.Init()
-    S.trackEndX       = 0.0
-    S.trackEndZ       = -C.TILE_LEN
-    S.trackEndHeading = 0.0
-    S.trackPath       = {}
-    S.trackMeshes     = {}
-    S.tilePool        = {}
-
-    for i = 1, C.NUM_INIT_SEGS do
-        GenerateSegment()
-    end
-    U.LogInfo("[Track] 初始化完毕，节点数=" .. #S.trackPath)
+    BakeLoop()
+    U.LogInfo("[Track] 初始化完毕，共 " .. LOOP_N .. " 个瓦片（永久放置）")
 end
 
--- 每帧更新：生成新段 + 回收旧瓦片
+-- 每帧更新：更新当前节点索引，不再需要动态生成/回收
 function M.Update(boatX, boatZ)
-    while S.trackEndZ < boatZ + LOOK_AHEAD do
-        GenerateSegment()
-    end
-
-    for i = #S.trackMeshes, 1, -1 do
-        local entry = S.trackMeshes[i]
-        if entry.endZ < boatZ - C.RECYCLE_DIST then
-            RecycleTile(entry.node)
-            table.remove(S.trackMeshes, i)
-        end
-    end
-
-    -- 裁剪过时的中心线节点（避免无限增长）
-    while #S.trackPath > 200 do
-        table.remove(S.trackPath, 1)
-    end
+    UpdateCurrentIdx(boatX, boatZ)
 end
 
--- 重置（重新开始游戏）
+-- 重置（重新开始游戏）：瓦片不动，只重置索引和圈数
 function M.Reset()
-    for i = #S.trackMeshes, 1, -1 do
-        RecycleTile(S.trackMeshes[i].node)
-        table.remove(S.trackMeshes, i)
-    end
-    S.trackPath       = {}
-    S.trackEndX       = 0.0
-    S.trackEndZ       = -C.TILE_LEN
-    S.trackEndHeading = 0.0
-
-    for i = 1, C.NUM_INIT_SEGS do
-        GenerateSegment()
-    end
-    U.LogInfo("[Track] 重置完成")
+    currentIdx = 1
+    S.lapCount = 0
+    -- 将船放回到路径起点（调用者负责传送船位置；这里保持接口一致）
+    U.LogInfo("[Track] 重置完成（瓦片保留，圈数归零）")
 end
 
 return M

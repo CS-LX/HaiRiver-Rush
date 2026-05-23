@@ -35,6 +35,7 @@ local S = {
     coinCount     = 0,
     distanceMeter = 0.0,
     hintTimer     = 8.0,
+    lapCount      = 0,          -- 完成圈数
 
     -- ── 输入 / 触摸 ───────────────────────────────────────
     touchId     = -1,
