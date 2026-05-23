@@ -20,14 +20,15 @@ local driftEmitR   = nil
 local DRIFT_TILT_THR = 7.0
 
 -- ─────────────────────────────────────────────────────────────
---  材质：透明无光照，适合水花/水雾粒子
+--  材质：实体无光照（NoTextureUnlit）
+--  原因：PBRNoTextureAlpha 在透明 pass 渲染，SingleLayerWater 写深度缓冲
+--        导致粒子后方有水时变黑。改用不透明 pass 渲染完全绕开该问题。
+--  淡出效果改用 SetSizeAdd 让粒子缩小消失，不依赖 alpha。
 -- ─────────────────────────────────────────────────────────────
 local function MakeWaterMat()
     local mat = Material.new()
-    mat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTextureAlpha.xml"))
-    mat:SetShaderParameter("MatDiffColor", Variant(Color(1.0, 1.0, 1.0, 0.85)))
-    mat:SetShaderParameter("Roughness",    Variant(0.9))
-    mat:SetShaderParameter("Metallic",     Variant(0.0))
+    mat:SetTechnique(0, cache:GetResource("Technique", "Techniques/NoTextureUnlit.xml"))
+    mat:SetShaderParameter("MatDiffColor", Variant(Color(1.0, 1.0, 1.0, 1.0)))
     return mat
 end
 
@@ -62,15 +63,17 @@ local function MakeEffect(mat, numP, minRate, maxRate,
     fx:SetMaxTimeToLive(maxTTL)
     fx:SetMinParticleSize(Vector2(minSz, minSz))
     fx:SetMaxParticleSize(Vector2(maxSz, maxSz))
-    fx:SetSizeAdd(-minSz * 1.2)    -- 粒子随时间缩小消失
+    -- 尺寸随时间快速缩小至消失（代替 alpha 淡出）
+    fx:SetSizeAdd(-maxSz * 0.85)
     fx:SetSizeMul(1.0)
     if gravity then
         fx:SetConstantForce(gravity)
     end
-    -- 颜色帧：白色不透明 → 淡蓝透明
-    fx:SetNumColorFrames(2)
-    fx:SetColorFrame(0, ColorFrame(Color(1.00, 1.00, 1.00, 0.90), 0.0))
-    fx:SetColorFrame(1, ColorFrame(Color(0.85, 0.92, 1.00, 0.00), 1.0))
+    -- 颜色帧：白色 → 淡蓝（不依赖 alpha，靠缩小消失）
+    fx:SetNumColorFrames(3)
+    fx:SetColorFrame(0, ColorFrame(Color(1.00, 1.00, 1.00, 1.0), 0.00))
+    fx:SetColorFrame(1, ColorFrame(Color(0.92, 0.96, 1.00, 1.0), 0.50))
+    fx:SetColorFrame(2, ColorFrame(Color(0.75, 0.88, 1.00, 1.0), 1.00))
     return fx
 end
 
