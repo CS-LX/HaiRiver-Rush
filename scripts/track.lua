@@ -75,7 +75,6 @@ local lapFirstRun  = true        -- 启动时屏蔽假圈数检测
 
 -- 重叠系数（消除瓦片拼接缝隙）
 -- WALL_OVERLAP 不宜太大，弯道处墙体会视觉交叉产生"叉路"感
-local WATER_OVERLAP = 1.10
 local WALL_OVERLAP  = 1.05
 
 -- ─────────────────────────────────────────────────────────────
@@ -85,12 +84,7 @@ local function CreateTileNode()
     local root = S.mainScene:CreateChild("Tile")
     root:SetEnabled(false)
 
-    -- 水面
-    local water = root:CreateChild("W")
-    local wMdl  = water:CreateComponent("StaticModel")
-    wMdl:SetModel(cache:GetResource("Model", "Models/Plane.mdl"))
-    wMdl:SetMaterial(U.MakeMaterial(0.04, 0.42, 0.62))
-    water:SetScale(Vector3(C.TRACK_WIDTH, 1.0, C.TILE_LEN * WATER_OVERLAP))
+    -- 水面由 water.lua 的 CustomGeometry 统一渲染，此处不再创建静态水面
 
     -- 左岸
     local lw    = root:CreateChild("LW")

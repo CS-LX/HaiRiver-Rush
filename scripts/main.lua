@@ -15,6 +15,7 @@ local Coins      = require "coins"
 local Camera     = require "camera"
 local UI         = require "ui"
 local ThrottleUI = require "throttleui"
+local Water      = require "water"
 
 -- ─────────────────────────────────────────────────────────────
 --  耐久度扣减（全局，供 boatphys.lua 调用）
@@ -59,6 +60,7 @@ local function RestartGame()
     BoatPhys.Reset()
     Camera.Reset()
     Track.Reset()
+    Water.Reset()
     UI.HideGameOver()
     UI.ResetHint()
 
@@ -149,6 +151,7 @@ function Start()
 
     SceneMod.Init()
     Track.Init()
+    Water.Init()      -- 动态波浪水面（替代 Track 瓦片水面）
     Boat.Init()
     BoatPhys.Init()   -- 必须在 Boat.Init() 之后（需要 S.boatNode）
     Camera.Init()
@@ -193,6 +196,7 @@ function HandleUpdate(eventType, eventData)
     Boat.Update(dt)
     Camera.Update(dt)
     Track.Update(S.boatPosX, S.boatPosZ)
+    Water.Update(dt)
     Obstacles.Update(dt)
     Coins.Update(dt)
     UI.Update(dt)

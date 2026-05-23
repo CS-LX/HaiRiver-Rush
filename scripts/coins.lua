@@ -20,6 +20,9 @@ local COIN_STEP = 6
 
 local lastSpawnIdx = 0
 
+-- 每枚金币的独立旋转角度（度），key = Node 对象
+local coinAngle = {}
+
 -- ─────────────────────────────────────────────────────────────
 --  工厂 / 对象池
 -- ─────────────────────────────────────────────────────────────
@@ -71,6 +74,7 @@ end
 
 local function Recycle(n)
     n:SetEnabled(false)
+    coinAngle[n] = nil
     table.insert(S.coinPool, n)
 end
 
@@ -99,6 +103,9 @@ local function SpawnRow(spawnNode)
             cy,
             spawnNode.z + rightZ * laneOff + fwdZ * dist
         ))
+        -- 竖立金币：pitch 90° 站立，随机初始朝向
+        coinAngle[coin] = math.random(0, 359)
+        coin:SetWorldRotation(Quaternion(0, coinAngle[coin], 0) * Quaternion(90, 0, 0))
         table.insert(S.activeCoins, coin)
     end
 end
@@ -126,7 +133,11 @@ function M.Update(dt)
     for i = #S.activeCoins, 1, -1 do
         local coin = S.activeCoins[i]
         if coin:IsEnabled() then
-            coin:Rotate(Quaternion(130.0 * dt, 0, 0))   -- 绕 X 轴翻转 = 竖直旋转
+            -- 竖立绕世界 Y 轴自转：angle 累计，SetWorldRotation 保持 pitch=90° 竖立
+            local a = (coinAngle[coin] or 0) + 130.0 * dt
+            if a >= 360 then a = a - 360 end
+            coinAngle[coin] = a
+            coin:SetWorldRotation(Quaternion(0, a, 0) * Quaternion(90, 0, 0))
 
             local p  = coin:GetPosition()
             local dx = math.abs(bp.x - p.x)
