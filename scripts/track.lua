@@ -88,8 +88,8 @@ local WALL_OVERLAP  = 1.05
 --         ^─── 各台阶在 X 轴上错开，向外依次加高
 --
 --  参数：
---    nSteps=4  stepH=WALL_H/4=0.8m  stepW=WALL_W/4=0.45m
---    innerX = TRACK_WIDTH/2 = 12.0m
+--    nSteps=4  stepH=WALL_H/4=0.8m  stepW=WALL_W*5/4=2.25m（视觉5倍宽）
+--    innerX = TRACK_WIDTH/2 = 12.0m（碰撞体保持原 WALL_W=1.8m 不变）
 --
 --  碰撞体保持不变（整块 WALL_W × WALL_H 矩形）
 --  台阶条带为视觉子节点，挂在 root 而非 lw/rw 节点上
@@ -101,22 +101,21 @@ local function CreateTileNode()
     -- 水面由 water.lua 的 CustomGeometry 统一渲染，此处不再创建静态水面
 
     -- 台阶参数
-    local nSteps  = 4
-    local stepH   = C.WALL_H / nSteps         -- 0.8 m
-    local stepW   = C.WALL_W / nSteps         -- 0.45 m
-    local innerX  = C.TRACK_WIDTH * 0.5       -- 12.0 m（河道边缘）
-    local wallLen = C.TILE_LEN * WALL_OVERLAP  -- 10.5 m
+    -- 视觉宽度 = 原 WALL_W 的 5 倍，碰撞体仍使用原 WALL_W
+    local nSteps      = 4
+    local visualTotalW = C.WALL_W * 5           -- 9.0 m（5 倍驳岸宽）
+    local stepH       = C.WALL_H / nSteps       -- 0.8 m
+    local stepW       = visualTotalW / nSteps   -- 2.25 m
+    local innerX      = C.TRACK_WIDTH * 0.5     -- 12.0 m（河道边缘）
+    local wallLen     = C.TILE_LEN * WALL_OVERLAP  -- 10.5 m
 
     -- 预制材质：人行道石板（浅灰）用于内三阶，混凝土（深灰）用于最外阶
     local matStep = cache:GetResource("Material", "uuid://DKmYSWaMUJO6PDtihBbjHUQj")  -- UrbanSidewalk01
     local matOuter= cache:GetResource("Material", "uuid://Gm0CwVtSclGB7uj0Zs_eP8Gs")  -- Concrete01
 
-    -- 帽沿材质（顶面压顶条）复用石板
-    local matCap  = matStep
-
     -- 构造单侧驳岸（xSign: -1=左岸 +1=右岸, lname: "LW"/"RW"）
     local function MakeBank(xSign, lname)
-        -- ── 物理碰撞节点（无 StaticModel，仅碰撞体）──────────────
+        -- ── 物理碰撞节点（无 StaticModel，仅碰撞体，尺寸位置不变）──
         local wallCx = xSign * (innerX + C.WALL_W * 0.5)
         local wn = root:CreateChild(lname)
         wn:SetScale(Vector3(C.WALL_W, C.WALL_H, wallLen))
@@ -126,11 +125,10 @@ local function CreateTileNode()
         rb:SetCollisionLayerAndMask(4, 1)
         local col = wn:CreateComponent("CollisionShape")
         col:SetBox(Vector3(1, 1, 1), Vector3.ZERO, Quaternion.IDENTITY)
-        -- 注意：不在 wn 上加 StaticModel，避免遮挡台阶视觉
 
         -- ── 4 级台阶条带（视觉子节点，挂在 root）────────────────
         --  第 i 级（i=1 最内/最矮）：
-        --    宽 = stepW，高 = stepH*i，长 = wallLen
+        --    宽 = stepW（2.25m），高 = stepH*i，长 = wallLen
         --    中心 X = xSign*(innerX + (i-0.5)*stepW)
         --    中心 Y = (stepH*i)/2
         for i = 1, nSteps do
@@ -144,16 +142,6 @@ local function CreateTileNode()
             sn:SetScale(Vector3(stepW, stepH * i, wallLen))
             sn:SetPosition(Vector3(cx, cy, 0))
         end
-
-        -- ── 压顶帽沿（顶面薄板，略宽于整个驳岸，装饰用）────────
-        local capH  = 0.12
-        local capW  = C.WALL_W + 0.18  -- 稍宽一些，有出挑感
-        local capN  = root:CreateChild(lname .. "Cap")
-        local capSm = capN:CreateComponent("StaticModel")
-        capSm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
-        capSm:SetMaterial(matCap)
-        capN:SetScale(Vector3(capW, capH, wallLen + 0.05))
-        capN:SetPosition(Vector3(wallCx, C.WALL_H + capH * 0.5, 0))
     end
 
     MakeBank(-1, "LW")   -- 左岸
