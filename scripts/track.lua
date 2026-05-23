@@ -109,9 +109,9 @@ local function CreateTileNode()
     local innerX      = C.TRACK_WIDTH * 0.5     -- 12.0 m（河道边缘）
     local wallLen     = C.TILE_LEN * WALL_OVERLAP  -- 10.5 m
 
-    -- 预制材质：人行道石板（浅灰）用于内三阶，混凝土（深灰）用于最外阶
-    local matStep = cache:GetResource("Material", "uuid://DKmYSWaMUJO6PDtihBbjHUQj")  -- UrbanSidewalk01
-    local matOuter= cache:GetResource("Material", "uuid://Gm0CwVtSclGB7uj0Zs_eP8Gs")  -- Concrete01
+    -- 预制材质：浅色石板用于内三阶，变体石板用于最外阶
+    local matStep = cache:GetResource("Material", "uuid://GSN7IaGGBlvP2Xk_zX9UQyuq")  -- StonePaving01（浅色石板）
+    local matOuter= cache:GetResource("Material", "uuid://DBZayTa0xAHpg9NRUkG4HLIs")  -- StonePaving02（浅色石板变体）
 
     -- 构造单侧驳岸（xSign: -1=左岸 +1=右岸, lname: "LW"/"RW"）
     local function MakeBank(xSign, lname)
