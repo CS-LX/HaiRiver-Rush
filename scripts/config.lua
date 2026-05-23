@@ -22,7 +22,7 @@ M.STEER_SPEED     = 90.0        -- 度/秒
 M.BOAT_BASE_Y     = 0.35
 
 -- 赛道尺寸
-M.TRACK_WIDTH     = 16.0        -- 河道宽度（米）
+M.TRACK_WIDTH     = 24.0        -- 河道宽度（米）（原16m，拓宽1.5倍）
 M.TILE_LEN        = 10.0        -- 每块瓦片长度
 M.TILES_PER_SEG   = 6           -- 每段瓦片数
 M.NUM_INIT_SEGS   = 6           -- 初始生成段数

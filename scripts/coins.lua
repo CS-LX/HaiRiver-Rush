@@ -23,14 +23,38 @@ local lastSpawnIdx = 0
 -- ─────────────────────────────────────────────────────────────
 --  工厂 / 对象池
 -- ─────────────────────────────────────────────────────────────
+local coinMat = nil
+
+local function BuildCoinMat()
+    if coinMat then return coinMat end
+    local mat = Material:new()
+    mat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
+    mat:SetShaderParameter("MatDiffColor",    Variant(Color(1.0, 0.80, 0.05, 1.0)))
+    mat:SetShaderParameter("Metallic",        Variant(0.95))
+    mat:SetShaderParameter("Roughness",       Variant(0.12))
+    mat:SetShaderParameter("MatEmissiveColor",Variant(Color(0.45, 0.32, 0.0)))  -- 淡金辉，不压金属感
+    coinMat = mat
+    return mat
+end
+
 local function BuildCoin()
     local node = S.mainScene:CreateChild("Coin")
     node:SetEnabled(false)
     local mdl = node:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
-    mdl:SetMaterial(U.MakeMaterial(1.0, 0.82, 0.0))
-    -- 金币加大：直径 1.4m，厚度 0.22m
+    mdl:SetMaterial(BuildCoinMat())
+    -- 金币：直径 1.4m，厚度 0.22m
     node:SetScale(Vector3(1.4, 0.22, 1.4))
+
+    -- 点光源：柔和金色环境光
+    local lightNode = node:CreateChild("CoinLight")
+    local light = lightNode:CreateComponent("Light")
+    light.lightType   = LIGHT_POINT
+    light.color       = Color(1.0, 0.85, 0.1)
+    light.brightness  = 0.5
+    light.range       = 2.8
+    light.castShadows = false
+
     return node
 end
 
@@ -102,7 +126,7 @@ function M.Update(dt)
     for i = #S.activeCoins, 1, -1 do
         local coin = S.activeCoins[i]
         if coin:IsEnabled() then
-            coin:Rotate(Quaternion(0, 110.0 * dt, 0))
+            coin:Rotate(Quaternion(130.0 * dt, 0, 0))   -- 绕 X 轴翻转 = 竖直旋转
 
             local p  = coin:GetPosition()
             local dx = math.abs(bp.x - p.x)
