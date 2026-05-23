@@ -76,10 +76,7 @@ local lapFirstRun  = true        -- 启动时屏蔽假圈数检测
 -- 重叠系数（消除瓦片拼接缝隙）
 -- WALL_OVERLAP 不宜太大，弯道处墙体会视觉交叉产生"叉路"感
 local WALL_OVERLAP  = 1.05
--- 台阶视觉条带需要更大的重叠系数：台阶最远延伸到距中心线约 21m，
--- 最大弯道 3°/格，缺口 ≈ 21 × sin(3°) ≈ 1.1m，需要补偿约 12%
--- 取 1.25 留足余量，台阶纯视觉无碰撞，轻微交叠不影响体验
-local STEP_OVERLAP  = 1.25
+-- 台阶视觉长度由 CreateTileNode(dh) 按弧度动态计算，不使用固定系数
 
 -- ─────────────────────────────────────────────────────────────
 --  内部：构建一个瓦片节点（海河驳岸台阶造型；默认 disabled）
@@ -98,7 +95,8 @@ local STEP_OVERLAP  = 1.25
 --  碰撞体保持不变（整块 WALL_W × WALL_H 矩形）
 --  台阶条带为视觉子节点，挂在 root 而非 lw/rw 节点上
 -- ─────────────────────────────────────────────────────────────
-local function CreateTileNode()
+-- dh: 本格的航向变化量（度），用于动态计算台阶视觉长度
+local function CreateTileNode(dh)
     local root = S.mainScene:CreateChild("Tile")
     root:SetEnabled(false)
 
@@ -110,9 +108,17 @@ local function CreateTileNode()
     local visualTotalW = C.WALL_W * 5           -- 9.0 m（5 倍驳岸宽）
     local stepH       = C.WALL_H / nSteps       -- 0.8 m
     local stepW       = visualTotalW / nSteps   -- 2.25 m
-    local innerX      = C.TRACK_WIDTH * 0.5        -- 12.0 m（河道边缘）
+    local innerX      = C.TRACK_WIDTH * 0.5     -- 12.0 m（河道边缘）
     local wallLen     = C.TILE_LEN * WALL_OVERLAP  -- 10.5 m（物理碰撞体长度）
-    local stepLen     = C.TILE_LEN * STEP_OVERLAP  -- 12.5 m（台阶视觉长度，补偿弯道缺口）
+
+    -- 动态台阶长度：
+    --   直道(dh=0)  → stepLen = TILE_LEN，相邻瓦片边对边，无共面 → 无 Z-Fighting
+    --   弯道(dh=3°) → 最外边缘(21m)缺口 = 21×sin(3°)≈1.1m
+    --                  两侧瓦片各延伸 extra，合计恰好填满缺口，且因旋转不共面
+    local dh_rad  = math.abs(math.rad(dh))
+    local d_outer = innerX + nSteps * stepW           -- 最外侧台阶边缘距中心 = 21.0 m
+    local extra   = d_outer * math.sin(dh_rad)        -- 每侧向外延伸量
+    local stepLen = C.TILE_LEN + 2 * extra            -- 精确补偿，不过度重叠
 
     -- 预制材质：浅色石板用于内三阶，变体石板用于最外阶
     local matStep = cache:GetResource("Material", "uuid://GSN7IaGGBlvP2Xk_zX9UQyuq")  -- StonePaving01（浅色石板）
@@ -176,7 +182,7 @@ local function BakeLoop()
             cx = cx + math.sin(rad) * C.TILE_LEN
             cz = cz + math.cos(rad) * C.TILE_LEN
             LOOP_N = LOOP_N + 1
-            loopNodes[LOOP_N] = { x = cx, z = cz, heading = heading }
+            loopNodes[LOOP_N] = { x = cx, z = cz, heading = heading, dh = seg.dh }
         end
     end
 
@@ -194,7 +200,7 @@ local function BakeLoop()
         local midX = (prevX + n.x) * 0.5
         local midZ = (prevZ + n.z) * 0.5
 
-        local tile = CreateTileNode()
+        local tile = CreateTileNode(n.dh)
         -- 先设位置再 Enable，保证静态物理体在正确位置初始化
         tile:SetPosition(Vector3(midX, -0.05, midZ))
         tile:SetRotation(Quaternion(0, n.heading, 0))
