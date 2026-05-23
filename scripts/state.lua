@@ -36,6 +36,7 @@ local S = {
     distanceMeter = 0.0,
     hintTimer     = 8.0,
     lapCount      = 0,          -- 完成圈数
+    durability    = 1.0,        -- 当前耐久度（0.0~1.0，0 = 船沉了）
 
     -- ── 输入 / 触摸 ───────────────────────────────────────
     touchId     = -1,
@@ -55,12 +56,13 @@ local S = {
     obstInterval = 2.0,
 
     -- ── UI 节点 ───────────────────────────────────────────
-    uiRoot       = nil,
-    scoreText    = nil,
-    coinText     = nil,
-    speedText    = nil,
-    hintText     = nil,
-    gameOverRoot = nil,
+    uiRoot           = nil,
+    scoreText        = nil,
+    coinText         = nil,
+    speedText        = nil,
+    hintText         = nil,
+    -- durabilityText 已移至 throttleui.lua 管理
+    gameOverRoot     = nil,
 }
 
 return S

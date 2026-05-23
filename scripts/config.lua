@@ -50,4 +50,17 @@ M.SWIPE_MIN       = 40
 M.COIN_ROW_LEN    = 5
 M.COIN_GAP        = 2.2
 
+-- 耐久度（0.0 ~ 1.0 浮点，连续进度条）
+--   碰墙：0.15 + 0.10*(speed/SPEED_MAX)  → 低速 15%，满速 25%
+--   浮标：固定 0.10
+--   游船：固定 0.22
+--   恢复：+0.008/秒（油门 < 0.5 时才回血，鼓励减速驾驶）
+M.DMG_WALL_BASE   = 0.15     -- 碰墙基础扣量
+M.DMG_WALL_SPEED  = 0.10     -- 碰墙速度系数（×speed/SPEED_MAX）
+M.DMG_BUOY        = 0.10     -- 撞浮标扣量
+M.DMG_GAMEBOAT    = 0.22     -- 撞游船扣量
+M.DUR_REGEN       = 0.008    -- 每秒回复量（低油门时生效）
+M.DUR_REGEN_THR   = 0.50     -- 油门低于此值才回血
+M.OBS_HIT_CD      = 0.8      -- 障碍物碰撞冷却（秒）
+
 return M

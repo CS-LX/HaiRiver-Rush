@@ -73,6 +73,12 @@ function BoatPhys_OnNodeCollision(eventType, eventData)
     S.throttle = math.max(0.0, math.min(1.0, newThrottle))
 
     lastHitTime = now
+
+    -- ── 扣耐久度 ──────────────────────────────────────────────
+    if TakeDurabilityHit then
+        TakeDurabilityHit("wall")
+    end
+
     U.LogInfo(string.format(
         "[BoatPhys] 碰%s → 目标朝向=%.1f° 速度=%.1f→%.1f",
         name,
