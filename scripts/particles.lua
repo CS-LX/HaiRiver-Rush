@@ -81,21 +81,22 @@ function M.Init()
     local vis = S.boatVisNode
 
     -- ── 螺旋桨打水粒子 ──────────────────────────────────────
-    -- 节点挂在 boatVisNode 上，紧贴螺旋桨位置
+    -- 船体 BOAT_BASE_Y=0.35，水面 y≈0，局部 y 必须 > -0.35 才在水面以上
+    -- 设为 0.15 → 世界 y = 0.35+0.15 = 0.50，安全在水面上方
     local propNode = vis:CreateChild("PropSprayNode")
-    propNode:SetPosition(Vector3(0, -0.44, -2.30))
+    propNode:SetPosition(Vector3(0, 0.15, -2.25))
 
     propEffect = MakeEffect(
         MakeWaterMat(),
-        80,
-        20.0, 40.0,
-        -- 向后（-Z）+向上（+Y）扇形喷射，世界空间中大致正确
-        Vector3(-0.35, 0.25, -1.00),
-        Vector3( 0.35, 0.95, -0.20),
-        1.5, 4.5,
-        0.35, 0.80,
-        0.04, 0.13,
-        Vector3(0, -4.5, 0)       -- 重力向下
+        120,
+        25.0, 55.0,
+        -- 强力向上 + 向后扇形：确保粒子飞出水面后才落下
+        Vector3(-0.45, 0.55, -0.90),
+        Vector3( 0.45, 1.20, -0.15),
+        3.0, 7.0,       -- 更高速度，高速行驶时粒子飞得更远更显眼
+        0.60, 1.40,     -- 更长寿命
+        0.08, 0.22,     -- 更大粒子，高速下更易看清
+        Vector3(0, -5.5, 0)
     )
 
     propEmitter = propNode:CreateComponent("ParticleEmitter")
@@ -103,18 +104,19 @@ function M.Init()
     propEmitter:SetEmitting(false)
 
     -- ── 漂移水花：左舷（boatTiltZ > DRIFT_TILT_THR 时激活）──
+    -- 局部 y=0.18 → 世界 y=0.53，确保在水面以上
     local driftLNode = vis:CreateChild("DriftSprayL")
-    driftLNode:SetPosition(Vector3(-0.95, 0.05, 0.0))
+    driftLNode:SetPosition(Vector3(-0.95, 0.18, 0.0))
 
     local fxL = MakeEffect(
         MakeWaterMat(),
-        50,
-        30.0, 50.0,
-        Vector3(-1.0, 0.30, -0.30),   -- 向左外侧飞溅
-        Vector3(-0.2, 1.00,  0.20),
-        2.0, 5.5,
-        0.25, 0.60,
-        0.05, 0.16,
+        60,
+        35.0, 60.0,
+        Vector3(-1.0, 0.50, -0.35),   -- 向左外侧+偏上飞溅
+        Vector3(-0.2, 1.20,  0.20),
+        2.5, 6.0,
+        0.40, 0.90,
+        0.07, 0.20,
         Vector3(0, -6.0, 0)
     )
     driftEmitL = driftLNode:CreateComponent("ParticleEmitter")
@@ -123,17 +125,17 @@ function M.Init()
 
     -- ── 漂移水花：右舷（boatTiltZ < -DRIFT_TILT_THR 时激活）─
     local driftRNode = vis:CreateChild("DriftSprayR")
-    driftRNode:SetPosition(Vector3(0.95, 0.05, 0.0))
+    driftRNode:SetPosition(Vector3(0.95, 0.18, 0.0))
 
     local fxR = MakeEffect(
         MakeWaterMat(),
-        50,
-        30.0, 50.0,
-        Vector3(0.2, 0.30, -0.30),    -- 向右外侧飞溅
-        Vector3(1.0, 1.00,  0.20),
-        2.0, 5.5,
-        0.25, 0.60,
-        0.05, 0.16,
+        60,
+        35.0, 60.0,
+        Vector3(0.2, 0.50, -0.35),    -- 向右外侧+偏上飞溅
+        Vector3(1.0, 1.20,  0.20),
+        2.5, 6.0,
+        0.40, 0.90,
+        0.07, 0.20,
         Vector3(0, -6.0, 0)
     )
     driftEmitR = driftRNode:CreateComponent("ParticleEmitter")
