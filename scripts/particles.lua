@@ -90,13 +90,13 @@ function M.Init()
         MakeWaterMat(),
         120,
         25.0, 55.0,
-        -- 强力向上 + 向后扇形：确保粒子飞出水面后才落下
-        Vector3(-0.45, 0.55, -0.90),
-        Vector3( 0.45, 1.20, -0.15),
-        3.0, 7.0,       -- 更高速度，高速行驶时粒子飞得更远更显眼
-        0.60, 1.40,     -- 更长寿命
-        0.08, 0.22,     -- 更大粒子，高速下更易看清
-        Vector3(0, -5.5, 0)
+        -- Y 分量为主力：粒子被强力向上抛起，先升后落，不入水
+        Vector3(-0.35, 1.20, -0.50),
+        Vector3( 0.35, 2.20,  0.10),
+        5.0, 10.0,      -- 高速度保证粒子飞得足够高
+        0.70, 1.60,     -- 足够长的寿命让抛物线完整可见
+        0.08, 0.22,
+        Vector3(0, -4.0, 0)   -- 适度重力，不要太猛把粒子迅速压下去
     )
 
     propEmitter = propNode:CreateComponent("ParticleEmitter")
@@ -112,12 +112,12 @@ function M.Init()
         MakeWaterMat(),
         60,
         35.0, 60.0,
-        Vector3(-1.0, 0.50, -0.35),   -- 向左外侧+偏上飞溅
-        Vector3(-0.2, 1.20,  0.20),
-        2.5, 6.0,
-        0.40, 0.90,
+        Vector3(-0.80, 1.00, -0.30),  -- 斜向左上抛射
+        Vector3(-0.10, 2.00,  0.20),
+        4.0, 8.0,
+        0.50, 1.20,
         0.07, 0.20,
-        Vector3(0, -6.0, 0)
+        Vector3(0, -4.5, 0)
     )
     driftEmitL = driftLNode:CreateComponent("ParticleEmitter")
     driftEmitL.effect = fxL
@@ -131,12 +131,12 @@ function M.Init()
         MakeWaterMat(),
         60,
         35.0, 60.0,
-        Vector3(0.2, 0.50, -0.35),    -- 向右外侧+偏上飞溅
-        Vector3(1.0, 1.20,  0.20),
-        2.5, 6.0,
-        0.40, 0.90,
+        Vector3(0.10, 1.00, -0.30),   -- 斜向右上抛射
+        Vector3(0.80, 2.00,  0.20),
+        4.0, 8.0,
+        0.50, 1.20,
         0.07, 0.20,
-        Vector3(0, -6.0, 0)
+        Vector3(0, -4.5, 0)
     )
     driftEmitR = driftRNode:CreateComponent("ParticleEmitter")
     driftEmitR.effect = fxR
