@@ -115,14 +115,17 @@ local function CreateTileNode(dh)
     --   直道(dh=0)  → stepLen = TILE_LEN，相邻瓦片边对边，无共面 → 无 Z-Fighting
     --   弯道(dh=3°) → 最外边缘(21m)缺口 = 21×sin(3°)≈1.1m
     --                  两侧瓦片各延伸 extra，合计恰好填满缺口，且因旋转不共面
+    -- 台阶外缘距路径中心距离（城市地面从此处开始）
+    local d_outer = innerX + nSteps * stepW           -- 12.0 + 4×2.25 = 21.0 m
+
     local dh_rad  = math.abs(math.rad(dh))
-    local d_outer = innerX + nSteps * stepW           -- 最外侧台阶边缘距中心 = 21.0 m
     local extra   = d_outer * math.sin(dh_rad)        -- 每侧向外延伸量
     local stepLen = C.TILE_LEN + 2 * extra            -- 精确补偿，不过度重叠
 
-    -- 预制材质：浅色石板用于内三阶，变体石板用于最外阶
-    local matStep = cache:GetResource("Material", "uuid://GSN7IaGGBlvP2Xk_zX9UQyuq")  -- StonePaving01（浅色石板）
-    local matOuter= cache:GetResource("Material", "uuid://DBZayTa0xAHpg9NRUkG4HLIs")  -- StonePaving02（浅色石板变体）
+    -- 预制材质
+    local matStep   = cache:GetResource("Material", "uuid://GSN7IaGGBlvP2Xk_zX9UQyuq")  -- StonePaving01（台阶内三阶）
+    local matOuter  = cache:GetResource("Material", "uuid://DBZayTa0xAHpg9NRUkG4HLIs")  -- StonePaving02（台阶最外阶）
+    local matGround = cache:GetResource("Material", "uuid://Gm0CwVtSclGB7uj0Zs_eP8Gs")  -- Concrete01（城市地面）
 
     -- 构造单侧驳岸（xSign: -1=左岸 +1=右岸, lname: "LW"/"RW"）
     local function MakeBank(xSign, lname)
@@ -153,6 +156,19 @@ local function CreateTileNode(dh)
             sn:SetScale(Vector3(stepW, stepH * i, stepLen))
             sn:SetPosition(Vector3(cx, cy, 0))
         end
+
+        -- ── 城市地面（台阶外侧，顶面与最高台阶顶面水平齐平）─────
+        --  顶面 y = WALL_H = 3.2m，薄板厚 groundH，向外延伸 groundW
+        local groundW  = 50.0                                  -- 城市地面宽度（向外延伸）
+        local groundH  = 0.20                                  -- 薄板厚度
+        local groundCx = xSign * (d_outer + groundW * 0.5)    -- 中心 X
+        local groundCy = C.WALL_H - groundH * 0.5             -- 顶面对齐 WALL_H
+        local gn  = root:CreateChild(lname .. "Gnd")
+        local gm  = gn:CreateComponent("StaticModel")
+        gm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
+        gm:SetMaterial(matGround)
+        gn:SetScale(Vector3(groundW, groundH, stepLen))
+        gn:SetPosition(Vector3(groundCx, groundCy, 0))
     end
 
     MakeBank(-1, "LW")   -- 左岸
