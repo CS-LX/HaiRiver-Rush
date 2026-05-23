@@ -235,6 +235,23 @@ function M.GetNodeAhead(boatZ, distAhead)
     return loopNodes[idx]
 end
 
+-- 返回当前赛道节点索引（障碍物/金币用于基于索引的生成）
+function M.GetCurrentIdx()
+    return currentIdx
+end
+
+-- 根据绝对索引偏移返回节点（障碍物/金币预分配用）
+function M.GetNodeAtOffset(offset)
+    if LOOP_N == 0 then return nil end
+    local idx = ((currentIdx - 1 + offset) % LOOP_N) + 1
+    return loopNodes[idx]
+end
+
+-- 返回总节点数
+function M.GetLoopN()
+    return LOOP_N
+end
+
 -- 找离 (x, z) 最近的中心线节点（boatphys 碰墙检测备用）
 function M.GetNearestNode(x, z)
     if LOOP_N == 0 then return nil end

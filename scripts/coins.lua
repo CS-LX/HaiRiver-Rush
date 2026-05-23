@@ -1,5 +1,9 @@
 -- ============================================================
 --  coins.lua  —  金币工厂、对象池、生成与采集
+--  生成策略：基于赛道索引，每隔固定瓦片数生成一行
+--  - 停留原地不会堆积金币
+--  - 往后行驶不会触发新生成
+--  - 金币高度与船齐平，无需跳跃即可捡到
 -- ============================================================
 local C     = require "config"
 local S     = require "state"
@@ -7,6 +11,14 @@ local U     = require "utils"
 local Track = require "track"
 
 local M = {}
+
+-- 前方固定瓦片偏移处生成金币（与障碍物错开 4 个节点）
+local SPAWN_TILES = math.floor(C.SPAWN_DIST / C.TILE_LEN) + 4
+
+-- 每隔多少个索引生成一行金币（比障碍物稍密）
+local COIN_STEP = 6
+
+local lastSpawnIdx = 0
 
 -- ─────────────────────────────────────────────────────────────
 --  工厂 / 对象池
@@ -17,7 +29,8 @@ local function BuildCoin()
     local mdl = node:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
     mdl:SetMaterial(U.MakeMaterial(1.0, 0.82, 0.0))
-    node:SetScale(Vector3(0.52, 0.13, 0.52))
+    -- 金币加大：直径 1.4m，厚度 0.22m
+    node:SetScale(Vector3(1.4, 0.22, 1.4))
     return node
 end
 
@@ -38,12 +51,9 @@ local function Recycle(n)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  生成一行金币，沿赛道前进方向排列
+--  生成一行金币，高度与船齐平（无需跳跃）
 -- ─────────────────────────────────────────────────────────────
-local function SpawnRow(boatZ)
-    local spawnNode = Track.GetNodeAhead(boatZ, C.SPAWN_DIST + 10.0)
-    if not spawnNode then return end
-
+local function SpawnRow(spawnNode)
     local rad    = math.rad(spawnNode.heading)
     local fwdX   = math.sin(rad)
     local fwdZ   = math.cos(rad)
@@ -54,19 +64,15 @@ local function SpawnRow(boatZ)
     local offsets = { -C.TRACK_WIDTH / 3.5, 0.0, C.TRACK_WIDTH / 3.5 }
     local laneOff = offsets[math.random(1, 3)]
 
-    local arc  = math.random() > 0.5  -- 随机拱形排列
-    local cy   = C.BOAT_BASE_Y + 1.0
+    -- 高度与船齐平，确保水面行驶即可捡到（去掉拱形高度变化）
+    local cy = C.BOAT_BASE_Y + 0.5
 
     for i = 1, C.COIN_ROW_LEN do
         local coin = GetCoin()
         local dist = (i - 1) * C.COIN_GAP
-        local arcY = 0.0
-        if arc then
-            arcY = math.sin((i - 1) / (C.COIN_ROW_LEN - 1) * math.pi) * 1.5
-        end
         coin:SetPosition(Vector3(
             spawnNode.x + rightX * laneOff + fwdX * dist,
-            cy + arcY,
+            cy,
             spawnNode.z + rightZ * laneOff + fwdZ * dist
         ))
         table.insert(S.activeCoins, coin)
@@ -77,11 +83,18 @@ end
 --  每帧更新
 -- ─────────────────────────────────────────────────────────────
 function M.Update(dt)
-    -- 按障碍物间隔的 1.2 倍生成金币行
-    S.coinTimer = S.coinTimer + dt
-    if S.coinTimer >= S.obstInterval * 1.2 then
-        S.coinTimer = 0.0
-        SpawnRow(S.boatPosZ)
+    local curIdx = Track.GetCurrentIdx()
+    local loopN  = Track.GetLoopN()
+    if loopN == 0 then return end
+
+    -- 只有向前行驶超过 COIN_STEP 个索引才生成
+    local diff = (curIdx - lastSpawnIdx + loopN) % loopN
+    if diff >= COIN_STEP then
+        local spawnNode = Track.GetNodeAtOffset(SPAWN_TILES)
+        if spawnNode then
+            SpawnRow(spawnNode)
+        end
+        lastSpawnIdx = curIdx
     end
 
     local bp = S.boatNode:GetPosition()
@@ -96,14 +109,13 @@ function M.Update(dt)
             local dy = math.abs(bp.y - p.y)
             local dz = math.abs(bp.z - p.z)
 
-            if dx < 1.3 and dy < 1.4 and dz < 2.2 then
-                -- 采集
+            -- 采集碰撞范围适配新尺寸
+            if dx < 1.6 and dy < 1.2 and dz < 2.4 then
                 S.coinCount = S.coinCount + 1
                 Recycle(coin)
                 table.remove(S.activeCoins, i)
-                U.LogInfo("[Coin] 收集! 共 " .. S.coinCount)
             else
-                -- 用前向点积判断是否落后
+                -- 回收落后的金币
                 local rad  = math.rad(S.boatHeading)
                 local fwdX = math.sin(rad)
                 local fwdZ = math.cos(rad)
@@ -125,7 +137,8 @@ function M.ClearAll()
         Recycle(S.activeCoins[i])
         table.remove(S.activeCoins, i)
     end
-    S.coinTimer = 0.0
+    lastSpawnIdx = 0
+    S.coinTimer  = 0.0
 end
 
 return M
