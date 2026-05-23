@@ -76,6 +76,10 @@ local lapFirstRun  = true        -- 启动时屏蔽假圈数检测
 -- 重叠系数（消除瓦片拼接缝隙）
 -- WALL_OVERLAP 不宜太大，弯道处墙体会视觉交叉产生"叉路"感
 local WALL_OVERLAP  = 1.05
+-- 台阶视觉条带需要更大的重叠系数：台阶最远延伸到距中心线约 21m，
+-- 最大弯道 3°/格，缺口 ≈ 21 × sin(3°) ≈ 1.1m，需要补偿约 12%
+-- 取 1.25 留足余量，台阶纯视觉无碰撞，轻微交叠不影响体验
+local STEP_OVERLAP  = 1.25
 
 -- ─────────────────────────────────────────────────────────────
 --  内部：构建一个瓦片节点（海河驳岸台阶造型；默认 disabled）
@@ -106,8 +110,9 @@ local function CreateTileNode()
     local visualTotalW = C.WALL_W * 5           -- 9.0 m（5 倍驳岸宽）
     local stepH       = C.WALL_H / nSteps       -- 0.8 m
     local stepW       = visualTotalW / nSteps   -- 2.25 m
-    local innerX      = C.TRACK_WIDTH * 0.5     -- 12.0 m（河道边缘）
-    local wallLen     = C.TILE_LEN * WALL_OVERLAP  -- 10.5 m
+    local innerX      = C.TRACK_WIDTH * 0.5        -- 12.0 m（河道边缘）
+    local wallLen     = C.TILE_LEN * WALL_OVERLAP  -- 10.5 m（物理碰撞体长度）
+    local stepLen     = C.TILE_LEN * STEP_OVERLAP  -- 12.5 m（台阶视觉长度，补偿弯道缺口）
 
     -- 预制材质：浅色石板用于内三阶，变体石板用于最外阶
     local matStep = cache:GetResource("Material", "uuid://GSN7IaGGBlvP2Xk_zX9UQyuq")  -- StonePaving01（浅色石板）
@@ -139,7 +144,7 @@ local function CreateTileNode()
             local sm  = sn:CreateComponent("StaticModel")
             sm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
             sm:SetMaterial(mat)
-            sn:SetScale(Vector3(stepW, stepH * i, wallLen))
+            sn:SetScale(Vector3(stepW, stepH * i, stepLen))
             sn:SetPosition(Vector3(cx, cy, 0))
         end
     end
