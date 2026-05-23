@@ -50,7 +50,7 @@ end
 function M.Init()
     S.cameraNode = S.mainScene:CreateChild("Camera")
     local cam    = S.cameraNode:CreateComponent("Camera")
-    cam:SetFarClip(180.0)
+    cam:SetFarClip(1200.0)
     cam:SetFov(70.0)
     renderer:SetViewport(0, Viewport:new(S.mainScene, cam))
 

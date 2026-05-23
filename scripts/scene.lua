@@ -1,8 +1,9 @@
 -- ============================================================
---  scene.lua  —  场景基础初始化（Octree、Zone、灯光）
+--  scene.lua  —  场景基础初始化（Octree、灯光、天空、雾效）
 -- ============================================================
-local S = require "state"
-local U = require "utils"
+local S        = require "state"
+local U        = require "utils"
+local SkyUtils = require "urhox-libs.Rendering.SkyUtils"
 
 local M = {}
 
@@ -11,32 +12,44 @@ function M.Init()
     S.mainScene:CreateComponent("Octree")
     S.mainScene:CreateComponent("PhysicsWorld")
 
-    -- 环境区域（雾、环境光）
-    local zone = S.mainScene:CreateComponent("Zone")
-    zone:SetBoundingBox(BoundingBox(-2000, 2000))
-    zone:SetAmbientColor(Color(0.35, 0.50, 0.65))
-    zone:SetFogColor(Color(0.55, 0.75, 0.92))
-    zone:SetFogStart(70.0)
-    zone:SetFogEnd(130.0)
+    -- ── 1. LightGroup（白天预设：含太阳方向光、IBL、预烘焙SH）────────
+    local lgFile = cache:GetResource("XMLFile", "LightGroup/Daytime.xml")
+    local lgNode = S.mainScene:CreateChild("LightGroup")
+    lgNode:LoadXML(lgFile:GetRoot())
 
-    -- 主方向光（太阳）
-    local sunNode = S.mainScene:CreateChild("Sun")
-    local sun = sunNode:CreateComponent("Light")
-    sun:SetLightType(LIGHT_DIRECTIONAL)
-    sun:SetColor(Color(1.0, 0.93, 0.82))
-    sun:SetBrightness(1.1)
-    sun:SetCastShadows(true)
-    sunNode:SetDirection(Vector3(0.5, -1.0, 0.7))
+    -- ── 2. 微调方向光（增强一点阳光亮度）──────────────────────────────
+    local sun = lgNode:GetComponent("Light", true)
+    if sun then
+        sun:SetBrightness(3.5)
+        sun:SetCastShadows(true)
+    end
 
-    -- 补光
-    local fillNode = S.mainScene:CreateChild("FillLight")
-    local fill = fillNode:CreateComponent("Light")
-    fill:SetLightType(LIGHT_DIRECTIONAL)
-    fill:SetColor(Color(0.4, 0.55, 0.85))
-    fill:SetBrightness(0.45)
-    fillNode:SetDirection(Vector3(-0.6, -0.4, -0.3))
+    -- ── 3. 从 LightGroup 获取 Zone，把雾推远──────────────────────────
+    --   河道赛车需要较远视距，fogStart/fogEnd 拉到数百米
+    --   fogColor 和天空地平线色保持一致，避免远处色差线
+    local zone = lgNode:GetComponent("Zone", true)
+    if zone then
+        zone.fogColor = Color(0.76, 0.88, 0.98)   -- 与天空地平线 horizon 色对齐
+        zone.fogStart = 300.0                      -- 300m 开始淡入雾
+        zone.fogEnd   = 600.0                      -- 600m 完全融入背景
+        zone.fogDensity = 0.85                     -- 稍减深度雾浓度，让远景更通透
+        -- Zone bbox 覆盖相机可能到达的所有位置
+        zone:SetBoundingBox(BoundingBox(Vector3(-3000, -500, -3000), Vector3(3000, 500, 3000)))
+    end
 
-    U.LogInfo("[Scene] 初始化完毕")
+    -- ── 4. 程序化渐变天空──────────────────────────────────────────────
+    --   zenith  = 深蓝天顶
+    --   horizon = 淡蓝地平线（≈ fogColor，无缝衔接）
+    --   ground  = 深灰地面（相机不会看到地面，但防止 cubemap 翻转时露底）
+    SkyUtils.CreateGradientSky(S.mainScene, {
+        zenith   = Color(0.10, 0.28, 0.72),   -- 深蓝天顶
+        horizon  = Color(0.76, 0.88, 0.98),   -- 淡蓝地平线（与 fogColor 一致）
+        ground   = Color(0.30, 0.38, 0.45),   -- 灰蓝地面
+        skyExp   = 0.45,                       -- 渐变偏向地平线，更自然
+        hdrBoost = 2.2,                        -- 补偿 ACES，防止天空偏暗
+    })
+
+    U.LogInfo("[Scene] 初始化完毕（LightGroup/Daytime + 渐变天空，视距 300-600m，farClip 1200m）")
 end
 
 return M
