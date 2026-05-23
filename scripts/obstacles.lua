@@ -1,165 +1,156 @@
 -- ============================================================
---  obstacles.lua  —  障碍物工厂、对象池、生成与回收
---  生成策略：基于赛道索引，每隔固定瓦片数生成一次
---  - 不再使用时间计时器，停留原地不会堆积
---  - 往后倒退不会触发新生成
---  - 回收：障碍物落后船 RECYCLE_DIST 后归池
+--  obstacles.lua  —  障碍物调度：生成节奏 + 浮标管理
+--
+--  游船逻辑已独立至 gameboat.lua。
+--  本模块负责：
+--    · 按赛道索引触发生成（浮标 or 游船）
+--    · 浮标：AABB 碰撞检测，仅扣耐久，玩家穿过
+--    · 游船：委托 Gameboat 模块处理
 -- ============================================================
-local C     = require "config"
-local S     = require "state"
-local U     = require "utils"
-local Track = require "track"
+local C        = require "config"
+local S        = require "state"
+local U        = require "utils"
+local Track    = require "track"
+local Gameboat = require "gameboat"
 
 local M = {}
 
-local OBS_TYPES = { "buoy", "gameboat" }
+-- ── 生成参数 ─────────────────────────────────────────────────
+local OBS_TYPES     = { "buoy", "gameboat" }
+local SPAWN_TILES   = math.floor(C.SPAWN_DIST / C.TILE_LEN)
+local OBS_STEP_BASE = 8
+local lastSpawnIdx  = 0
 
--- 前方固定瓦片偏移处生成障碍物
-local SPAWN_TILES = math.floor(C.SPAWN_DIST / C.TILE_LEN)  -- ~12 个瓦片
+-- ── 浮标碰撞范围（AABB，同金币逻辑） ─────────────────────────
+--   浮标半径 0.75m；玩家近似半径 1.1m
+local BUOY_HW = 0.75 + 1.1   -- 左右 = 1.85m
+local BUOY_HL = 0.75 + 1.8   -- 前后 = 2.55m（船较长，纵向放宽）
 
--- 上次生成时船在第几号索引（每隔 OBS_STEP 个索引生成一次）
-local lastSpawnIdx = 0
--- 每隔多少个赛道索引生成一次障碍物（随速度动态调整）
-local OBS_STEP_BASE = 8   -- 正常速度：每 8 个节点一个障碍
+-- ── 浮标伤害冷却 ─────────────────────────────────────────────
+local BUOY_HIT_CD  = 0.50
+local buoyLastHit  = -10.0
+
+-- ── 浮标对象池 ───────────────────────────────────────────────
+local buoyPool   = {}
+local activeBuoys = {}
 
 -- ─────────────────────────────────────────────────────────────
---  工厂：构建新的障碍物节点
+--  浮标工厂
 -- ─────────────────────────────────────────────────────────────
-local function BuildNode(t)
-    local node = S.mainScene:CreateChild("Obs_" .. t)
+local function BuildBuoy()
+    local node = S.mainScene:CreateChild("Buoy")
     node:SetEnabled(false)
-
-    if t == "buoy" then
-        local mdl = node:CreateComponent("StaticModel")
-        mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
-        mdl:SetMaterial(U.MakeMaterial(0.92, 0.12, 0.08))
-        node:SetScale(Vector3(0.75, 1.9, 0.75))
-        local col = node:CreateComponent("CollisionShape")
-        col:SetCylinder(0.75, 1.9, Vector3.ZERO, Quaternion.IDENTITY)
-
-    elseif t == "gameboat" then
-        local hull  = node:CreateChild("Hull")
-        local hMdl  = hull:CreateComponent("StaticModel")
-        hMdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
-        hMdl:SetMaterial(U.MakeMaterial(0.18, 0.38, 0.68))
-        hull:SetScale(Vector3(3.6, 1.3, 7.5))
-
-        local deck  = node:CreateChild("Deck")
-        local dMdl  = deck:CreateComponent("StaticModel")
-        dMdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
-        dMdl:SetMaterial(U.MakeMaterial(0.78, 0.76, 0.72))
-        deck:SetScale(Vector3(3.2, 0.95, 5.8))
-        deck:SetPosition(Vector3(0, 1.1, 0))
-
-        local col = node:CreateComponent("CollisionShape")
-        col:SetBox(Vector3(3.6, 2.5, 7.5), Vector3.ZERO, Quaternion.IDENTITY)
-    end
-
-    local rb = node:CreateComponent("RigidBody")
-    rb:SetMass(0)
-    rb:SetKinematic(true)
-    rb:SetCollisionLayerAndMask(2, 1)
-
+    local mdl = node:CreateComponent("StaticModel")
+    mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
+    mdl:SetMaterial(U.MakeMaterial(0.92, 0.12, 0.08))
+    node:SetScale(Vector3(1.5, 1.9, 1.5))
     return node
 end
 
--- ─────────────────────────────────────────────────────────────
---  对象池
--- ─────────────────────────────────────────────────────────────
-local function GetNode(t)
-    for i = 1, #S.obstaclePool do
-        if U.GetObsType(S.obstaclePool[i]) == t then
-            local n = table.remove(S.obstaclePool, i)
-            n:SetEnabled(true)
-            return n
-        end
-    end
-    return BuildNode(t)
+local function GetBuoy()
+    local n = #buoyPool > 0 and table.remove(buoyPool) or BuildBuoy()
+    n:SetEnabled(true)
+    return n
 end
 
-local function Recycle(n)
+local function RecycleBuoy(n)
     n:SetEnabled(false)
-    table.insert(S.obstaclePool, n)
+    table.insert(buoyPool, n)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  在指定节点处生成一个随机障碍物
+--  生成一个障碍物（浮标 or 游船）
 -- ─────────────────────────────────────────────────────────────
 local function SpawnAt(spawnNode)
-    local t    = OBS_TYPES[math.random(1, #OBS_TYPES)]
-    local node = GetNode(t)
-
+    local t      = OBS_TYPES[math.random(1, #OBS_TYPES)]
     local rad    = math.rad(spawnNode.heading)
     local rightX = math.cos(rad)
     local rightZ = -math.sin(rad)
-    local offsets = { -C.TRACK_WIDTH / 3.2, 0.0, C.TRACK_WIDTH / 3.2 }
-    local laneOff = offsets[math.random(1, 3)]
+    local lanes  = { -C.TRACK_WIDTH / 3.2, 0.0, C.TRACK_WIDTH / 3.2 }
+    local laneOff = lanes[math.random(1, 3)]
 
-    node:SetPosition(Vector3(
-        spawnNode.x + rightX * laneOff,
-        0,
-        spawnNode.z + rightZ * laneOff
-    ))
-    node:SetRotation(Quaternion(0, spawnNode.heading, 0))
-
-    table.insert(S.activeObstacles, node)
+    if t == "buoy" then
+        local node = GetBuoy()
+        node:SetWorldPosition(Vector3(
+            spawnNode.x + rightX * laneOff,
+            0,
+            spawnNode.z + rightZ * laneOff
+        ))
+        node:SetWorldRotation(Quaternion(0, spawnNode.heading, 0))
+        table.insert(activeBuoys, node)
+    else
+        Gameboat.Spawn(spawnNode, laneOff)
+    end
 end
 
 -- ─────────────────────────────────────────────────────────────
 --  每帧更新
 -- ─────────────────────────────────────────────────────────────
 function M.Update(dt)
-    -- 根据速度动态调整生成间隔（速度越快间距越小）
-    -- 速度 16 m/s → step 10；速度 55 m/s → step 5
+    -- ── 生成节奏 ─────────────────────────────────────────────
     local speedRatio = (S.speed - C.SPEED_MIN) / (C.SPEED_MAX - C.SPEED_MIN)
-    local obsStep = math.floor(math.max(5, OBS_STEP_BASE + 4 - speedRatio * 4 + 0.5))
-
-    local curIdx = Track.GetCurrentIdx()
-
-    -- 只有向前行驶（当前索引超过上次生成索引 + step）才生成
-    -- 使用环形距离判断"向前"
-    local loopN  = Track.GetLoopN()
+    local obsStep    = math.floor(math.max(5, OBS_STEP_BASE + 4 - speedRatio * 4 + 0.5))
+    local curIdx     = Track.GetCurrentIdx()
+    local loopN      = Track.GetLoopN()
     if loopN == 0 then return end
 
     local diff = (curIdx - lastSpawnIdx + loopN) % loopN
     if diff >= obsStep then
-        -- 在前方固定偏移处生成
         local spawnNode = Track.GetNodeAtOffset(SPAWN_TILES)
-        if spawnNode then
-            SpawnAt(spawnNode)
-        end
-        -- 更新生成索引（对齐到当前，避免连续触发）
+        if spawnNode then SpawnAt(spawnNode) end
         lastSpawnIdx = curIdx
     end
 
-    -- 回收落后的障碍物
-    local rad  = math.rad(S.boatHeading)
-    local fwdX = math.sin(rad)
-    local fwdZ = math.cos(rad)
+    -- ── 游船更新（委托） ─────────────────────────────────────
+    Gameboat.Update(dt)
 
-    for i = #S.activeObstacles, 1, -1 do
-        local obs = S.activeObstacles[i]
-        if obs:IsEnabled() then
-            local p   = obs:GetPosition()
-            local dx  = p.x - S.boatPosX
-            local dz  = p.z - S.boatPosZ
-            local dot = dx * fwdX + dz * fwdZ
-            if dot < -C.RECYCLE_DIST then
-                Recycle(obs)
-                table.remove(S.activeObstacles, i)
+    -- ── 浮标：碰撞检测 + 回收 ────────────────────────────────
+    if S.gameState == "playing" then
+        local bp  = S.boatNode:GetWorldPosition()
+        local now = time and time:GetElapsedTime() or 0
+        local fwdX = math.sin(math.rad(S.boatHeading))
+        local fwdZ = math.cos(math.rad(S.boatHeading))
+
+        for i = #activeBuoys, 1, -1 do
+            local node = activeBuoys[i]
+            if node:IsEnabled() then
+                local p  = node:GetWorldPosition()
+                local dx = math.abs(bp.x - p.x)
+                local dz = math.abs(bp.z - p.z)
+
+                -- AABB 碰撞（同金币逻辑）
+                if dx < BUOY_HW and dz < BUOY_HL then
+                    if (now - buoyLastHit) >= BUOY_HIT_CD then
+                        buoyLastHit = now
+                        if TakeDurabilityHit then TakeDurabilityHit("buoy") end
+                        U.LogInfo("[Obs] 撞浮标！扣耐久")
+                    end
+                end
+
+                -- 回收落后浮标
+                local ddx = p.x - S.boatPosX
+                local ddz = p.z - S.boatPosZ
+                if ddx * fwdX + ddz * fwdZ < -C.RECYCLE_DIST then
+                    RecycleBuoy(node)
+                    table.remove(activeBuoys, i)
+                end
             end
         end
     end
 end
 
--- 清空全部活跃障碍物（重新开始）
+-- ─────────────────────────────────────────────────────────────
+--  清空（重新开始）
+-- ─────────────────────────────────────────────────────────────
 function M.ClearAll()
-    for i = #S.activeObstacles, 1, -1 do
-        Recycle(S.activeObstacles[i])
-        table.remove(S.activeObstacles, i)
+    for i = #activeBuoys, 1, -1 do
+        RecycleBuoy(activeBuoys[i])
+        table.remove(activeBuoys, i)
     end
-    lastSpawnIdx   = 0
-    S.obstTimer    = 0.0
+    Gameboat.ClearAll()
+    lastSpawnIdx  = 0
+    buoyLastHit   = -10.0
+    S.obstTimer   = 0.0
     S.obstInterval = 2.0
 end
 

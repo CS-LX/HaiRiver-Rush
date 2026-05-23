@@ -10,7 +10,7 @@ local SceneMod   = require "scene"
 local Track      = require "track"
 local Boat       = require "boat"
 local BoatPhys   = require "boatphys"
-local Obstacles  = require "obstacles"
+local Obstacles  = require "obstacles"   -- 内部会 require gameboat
 local Coins      = require "coins"
 local Camera     = require "camera"
 local UI         = require "ui"
@@ -19,8 +19,6 @@ local ThrottleUI = require "throttleui"
 -- ─────────────────────────────────────────────────────────────
 --  耐久度扣减（全局，供 boatphys.lua 调用）
 -- ─────────────────────────────────────────────────────────────
-local lastObsHitTime = -10.0   -- 障碍物碰撞冷却计时
-
 -- 计算各碰撞类型的伤害量
 --   墙壁：基础 0.15 + 速度系数 0.10×(speed/SPEED_MAX)
 --   浮标：固定 0.10
@@ -48,53 +46,6 @@ function TakeDurabilityHit(source)
     end
 end
 
--- ─────────────────────────────────────────────────────────────
---  碰撞检测（手动 AABB，障碍物）
--- ─────────────────────────────────────────────────────────────
-local function CheckCollisions()
-    if S.gameState ~= "playing" then return end
-
-    local now = time and time:GetElapsedTime() or 0
-    if (now - lastObsHitTime) < C.OBS_HIT_CD then return end
-
-    local bp = S.boatNode:GetPosition()
-
-    for i = 1, #S.activeObstacles do
-        local obs = S.activeObstacles[i]
-        if obs:IsEnabled() then
-            local p  = obs:GetPosition()
-            local t  = U.GetObsType(obs)
-            local hit = false
-
-            -- 转换到障碍物局部空间进行碰撞检测
-            local obsRad = math.rad(obs:GetRotation():YawAngle())
-            local dx     = bp.x - p.x
-            local dz     = bp.z - p.z
-            local fwdX   = math.sin(obsRad)
-            local fwdZ   = math.cos(obsRad)
-            local rightX = math.cos(obsRad)
-            local rightZ = -math.sin(obsRad)
-            local localX = dx * rightX + dz * rightZ
-            local localZ = dx * fwdX   + dz * fwdZ
-
-            if t == "buoy" then
-                hit = math.abs(localX) < 1.0 and math.abs(localZ) < 1.0
-            elseif t == "gameboat" then
-                hit = math.abs(localX) < 2.6 and math.abs(localZ) < 4.2
-            end
-
-            if hit then
-                lastObsHitTime = now
-                -- 碰障碍物：扣耐久 + 减速
-                S.speed    = math.max(C.SPEED_MIN, S.speed - C.HIT_SPEED_LOSS)
-                local newT = (S.speed - C.SPEED_MIN) / (C.SPEED_MAX - C.SPEED_MIN)
-                S.throttle = math.max(0.0, math.min(1.0, newT))
-                TakeDurabilityHit(t)   -- "buoy" 或 "gameboat"
-                return
-            end
-        end
-    end
-end
 
 -- ─────────────────────────────────────────────────────────────
 --  重新开始
@@ -119,7 +70,6 @@ local function RestartGame()
     S.durability    = 1.0
     S.gameState     = "playing"
     S.touchSteering = 0
-    lastObsHitTime  = -10.0
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -233,7 +183,7 @@ function HandleUpdate(eventType, eventData)
     end
 
     S.distanceMeter = S.distanceMeter + S.speed * dt
-    S.score         = math.floor(S.distanceMeter) + S.coinCount * 10
+    S.score = math.floor(S.distanceMeter) + S.coinCount * 10
 
     -- 低油门时缓慢回复耐久（鼓励减速驾驶）
     if S.throttle < C.DUR_REGEN_THR and S.durability < 1.0 then
@@ -245,7 +195,6 @@ function HandleUpdate(eventType, eventData)
     Track.Update(S.boatPosX, S.boatPosZ)
     Obstacles.Update(dt)
     Coins.Update(dt)
-    CheckCollisions()
     UI.Update(dt)
     ThrottleUI.Update()
 end

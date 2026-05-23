@@ -51,22 +51,21 @@ function M.Init()
     eng:SetScale(Vector3(0.65, 0.75, 0.55))
     eng:SetPosition(Vector3(0, 0.12, -2.0))
 
-    -- ── 动态刚体（物理驱动，碰撞层 = 1，掩码 = 4 堤岸） ─────
+    -- ── 动态刚体（物理引擎驱动移动，碰墙由 NodeCollision 处理） ──
     local rb = S.boatNode:CreateComponent("RigidBody")
     rb:SetMass(80.0)
-    -- 锁定 Y 轴移动和所有旋转（船不受物理旋转，由代码控制朝向）
-    rb:SetLinearFactor(Vector3(1, 0, 1))
-    rb:SetAngularFactor(Vector3(0, 0, 0))
+    rb:SetLinearFactor(Vector3(1, 0, 1))   -- 锁 Y 轴移动
+    rb:SetAngularFactor(Vector3(0, 0, 0))  -- 锁所有旋转
     rb:SetLinearDamping(0.05)
-    rb:SetRestitution(0.2)    -- 碰墙后轻微弹性（主要靠 boatphys 处理）
+    rb:SetRestitution(0.15)
     rb:SetFriction(0.1)
-    rb:SetCollisionLayerAndMask(1, 4)  -- 只与堤岸（层4）发生物理碰撞
+    rb:SetCollisionLayerAndMask(1, 4)      -- 层1=玩家，掩码4=堤岸
 
     -- 碰撞体（盒型，与视觉模型匹配）
     local col = S.boatNode:CreateComponent("CollisionShape")
     col:SetBox(Vector3(1.9, 1.1, 3.6), Vector3(0, 0.25, 0), Quaternion.IDENTITY)
 
-    U.LogInfo("[Boat] 快艇创建完毕（动态刚体）")
+    U.LogInfo("[Boat] 快艇创建完毕（动态刚体，障碍物穿过，墙壁物理碰撞）")
 end
 
 -- 将角度差规范化到 [-180, 180]（最短路径）
@@ -94,7 +93,7 @@ function M.ReturnCenter(dt)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  每帧更新：通过刚体速度驱动，物理引擎负责碰撞推阻
+--  每帧更新：SetLinearVelocity 驱动，物理引擎处理墙壁碰撞
 -- ─────────────────────────────────────────────────────────────
 function M.Update(dt)
     -- ── 平滑追逐目标朝向（碰墙转向动画） ───────────────────
@@ -116,12 +115,12 @@ function M.Update(dt)
         ))
     end
 
-    -- 读回物理位置
+    -- 读回物理位置（物理引擎负责墙壁推挤）
     local pos  = S.boatNode:GetWorldPosition()
     S.boatPosX = pos.x
     S.boatPosZ = pos.z
 
-    -- 旋转由代码控制（不受物理旋转影响）
+    -- 旋转由代码控制
     S.boatNode:SetWorldRotation(Quaternion(0, S.boatHeading, 0))
     S.boatVisNode:SetRotation(Quaternion(0, 0, S.boatTiltZ))
 end
