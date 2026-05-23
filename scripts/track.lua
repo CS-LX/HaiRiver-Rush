@@ -246,6 +246,41 @@ function M.GetLoopN()
     return LOOP_N
 end
 
+-- 返回赛道中心线的 AABB（含 padding 边距）
+-- 返回 { minX, maxX, minZ, maxZ, centerX, centerZ, sizeX, sizeZ }
+function M.GetBounds(padding)
+    padding = padding or 0
+    if LOOP_N == 0 then
+        return { minX=-1000, maxX=1000, minZ=-1000, maxZ=1000,
+                 centerX=0, centerZ=0, sizeX=2000, sizeZ=2000 }
+    end
+    local minX, maxX = math.huge, -math.huge
+    local minZ, maxZ = math.huge, -math.huge
+    -- 也包含起始点 (0,0)
+    minX, maxX = 0, 0
+    minZ, maxZ = 0, 0
+    for i = 1, LOOP_N do
+        local n = loopNodes[i]
+        if n.x < minX then minX = n.x end
+        if n.x > maxX then maxX = n.x end
+        if n.z < minZ then minZ = n.z end
+        if n.z > maxZ then maxZ = n.z end
+    end
+    minX = minX - padding
+    maxX = maxX + padding
+    minZ = minZ - padding
+    maxZ = maxZ + padding
+    local cx = (minX + maxX) * 0.5
+    local cz = (minZ + maxZ) * 0.5
+    return {
+        minX = minX, maxX = maxX,
+        minZ = minZ, maxZ = maxZ,
+        centerX = cx, centerZ = cz,
+        sizeX = maxX - minX,
+        sizeZ = maxZ - minZ,
+    }
+end
+
 -- 找离 (x, z) 最近的中心线节点（boatphys 碰墙检测备用）
 function M.GetNearestNode(x, z)
     if LOOP_N == 0 then return nil end
