@@ -63,17 +63,17 @@ local function MakeEffect(mat, numP, minRate, maxRate,
     fx:SetMaxTimeToLive(maxTTL)
     fx:SetMinParticleSize(Vector2(minSz, minSz))
     fx:SetMaxParticleSize(Vector2(maxSz, maxSz))
-    -- 尺寸随时间快速缩小至消失（代替 alpha 淡出）
-    fx:SetSizeAdd(-maxSz * 0.85)
+    -- 尺寸随时间缩小至消失（代替 alpha 淡出）
+    fx:SetSizeAdd(-maxSz * 1.2)
     fx:SetSizeMul(1.0)
     if gravity then
         fx:SetConstantForce(gravity)
     end
-    -- 颜色帧：白色 → 淡蓝（不依赖 alpha，靠缩小消失）
+    -- 颜色帧：浅蓝 → 深蓝（靠缩小消失）
     fx:SetNumColorFrames(3)
-    fx:SetColorFrame(0, ColorFrame(Color(1.00, 1.00, 1.00, 1.0), 0.00))
-    fx:SetColorFrame(1, ColorFrame(Color(0.92, 0.96, 1.00, 1.0), 0.50))
-    fx:SetColorFrame(2, ColorFrame(Color(0.75, 0.88, 1.00, 1.0), 1.00))
+    fx:SetColorFrame(0, ColorFrame(Color(0.50, 0.80, 1.00, 1.0), 0.00))
+    fx:SetColorFrame(1, ColorFrame(Color(0.15, 0.55, 1.00, 1.0), 0.45))
+    fx:SetColorFrame(2, ColorFrame(Color(0.05, 0.35, 0.85, 1.0), 1.00))
     return fx
 end
 
@@ -93,13 +93,13 @@ function M.Init()
         MakeWaterMat(),
         120,
         25.0, 55.0,
-        -- Y 分量为主力：粒子被强力向上抛起，先升后落，不入水
-        Vector3(-0.35, 1.20, -0.50),
-        Vector3( 0.35, 2.20,  0.10),
-        5.0, 10.0,      -- 高速度保证粒子飞得足够高
-        0.70, 1.60,     -- 足够长的寿命让抛物线完整可见
-        0.08, 0.22,
-        Vector3(0, -4.0, 0)   -- 适度重力，不要太猛把粒子迅速压下去
+        -- 斜抛水花：主要向后喷，带一定上抛角
+        Vector3(-0.40, 0.30, -0.90),
+        Vector3( 0.40, 0.80, -0.30),
+        4.0, 8.0,
+        0.40, 0.90,
+        0.03, 0.08,
+        Vector3(0, -9.8, 0)
     )
 
     propEmitter = propNode:CreateComponent("ParticleEmitter")
@@ -115,12 +115,12 @@ function M.Init()
         MakeWaterMat(),
         60,
         35.0, 60.0,
-        Vector3(-0.80, 1.00, -0.30),  -- 斜向左上抛射
-        Vector3(-0.10, 2.00,  0.20),
-        4.0, 8.0,
-        0.50, 1.20,
-        0.07, 0.20,
-        Vector3(0, -4.5, 0)
+        Vector3(-0.90, 0.20, -0.40),  -- 向左侧斜抛
+        Vector3(-0.30, 0.60,  0.10),
+        3.0, 7.0,
+        0.35, 0.80,
+        0.03, 0.07,
+        Vector3(0, -9.8, 0)
     )
     driftEmitL = driftLNode:CreateComponent("ParticleEmitter")
     driftEmitL.effect = fxL
@@ -134,12 +134,12 @@ function M.Init()
         MakeWaterMat(),
         60,
         35.0, 60.0,
-        Vector3(0.10, 1.00, -0.30),   -- 斜向右上抛射
-        Vector3(0.80, 2.00,  0.20),
-        4.0, 8.0,
-        0.50, 1.20,
-        0.07, 0.20,
-        Vector3(0, -4.5, 0)
+        Vector3(0.30, 0.20, -0.40),   -- 向右侧斜抛
+        Vector3(0.90, 0.60,  0.10),
+        3.0, 7.0,
+        0.35, 0.80,
+        0.03, 0.07,
+        Vector3(0, -9.8, 0)
     )
     driftEmitR = driftRNode:CreateComponent("ParticleEmitter")
     driftEmitR.effect = fxR
@@ -152,26 +152,27 @@ end
 --  每帧更新
 -- ─────────────────────────────────────────────────────────────
 function M.Update(dt)
-    -- ── 螺旋桨水花：油门 > 0.05 时喷，发射率随油门线性增减 ──
-    local throttleOn = S.throttle > 0.05
+    -- ── 螺旋桨水花：速度 > 2 m/s 时喷，发射率随速度线性增减 ──
+    local speedOn = S.speed > 2.0
     if propEmitter then
-        if propEmitter:IsEmitting() ~= throttleOn then
-            propEmitter:SetEmitting(throttleOn)
+        if propEmitter:IsEmitting() ~= speedOn then
+            propEmitter:SetEmitting(speedOn)
         end
-        if throttleOn and propEffect then
-            -- 动态调整发射率：低速少水花，高速强喷射
-            local rate = 15.0 + S.throttle * 45.0
+        if speedOn and propEffect then
+            -- 速度 4~55 → 发射率 8~70（线性映射）
+            local t    = math.max(0, math.min(1, (S.speed - 4.0) / 51.0))
+            local rate = 8.0 + t * 62.0
             propEffect:SetMinEmissionRate(rate * 0.55)
             propEffect:SetMaxEmissionRate(rate)
         end
     end
 
     -- ── 漂移水花：根据侧倾方向决定哪侧飞溅 ─────────────────
-    -- boatTiltZ > 0 → 向左转，左舷吃水（LeftSplash）
-    -- boatTiltZ < 0 → 向右转，右舷吃水（RightSplash）
+    -- boatTiltZ < 0 → 向右转，右舷吃水 → 右侧喷
+    -- boatTiltZ > 0 → 向左转，左舷吃水 → 左侧喷
     local tilt  = S.boatTiltZ
-    local wantL = tilt >  DRIFT_TILT_THR
-    local wantR = tilt < -DRIFT_TILT_THR
+    local wantL = tilt < -DRIFT_TILT_THR
+    local wantR = tilt >  DRIFT_TILT_THR
 
     if driftEmitL then
         if driftEmitL:IsEmitting() ~= wantL then

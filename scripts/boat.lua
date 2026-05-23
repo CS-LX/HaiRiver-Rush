@@ -88,7 +88,7 @@ function M.Init()
     S.boatVisNode = S.boatNode:CreateChild("BoatVis")
 
     -- ── 预制材质 ─────────────────────────────────────────────
-    local matHull      = Mat(0.90, 0.20, 0.08,  0.05, 0.45)  -- 鲜红船壳
+    local matHull      = Mat(0.90, 0.20, 0.08,  0.65, 0.28)  -- 鲜红金属船壳
     local matDeck      = Mat(0.95, 0.92, 0.86,  0.00, 0.55)  -- 米白甲板
     local matChine     = Mat(1.00, 0.85, 0.10,  0.00, 0.50)  -- 黄色舷线
     local matCabin     = Mat(0.92, 0.90, 0.88,  0.00, 0.45)  -- 浅灰驾驶舱
@@ -101,7 +101,7 @@ function M.Init()
 
     -- ── V 型船壳（龙骨 + 左右侧板各倾斜 18°）────────────────
     -- 龙骨（底部中心条，略深色红）
-    local matKeel = Mat(0.72, 0.14, 0.06, 0.05, 0.55)
+    local matKeel = Mat(0.72, 0.14, 0.06, 0.65, 0.32)
     AddBox(S.boatVisNode, "Keel",  matKeel,  1.10, 0.18, 3.60,  0, -0.20, 0)
 
     -- 左舷侧壳（绕Z轴 -18° 使底边向内、顶边向外）
@@ -150,10 +150,10 @@ function M.Init()
     windshield:SetPosition(Vector3(0, 0.72, 0.70))
     windshield:SetRotation(Quaternion(-20, 0, 0))  -- 前倾 20°
 
-    -- 座椅靠背
-    AddBox(S.boatVisNode, "SeatBack",    matSeat, 0.70, 0.45, 0.10,  0, 0.60, -0.12)
-    -- 座椅坐垫
-    AddBox(S.boatVisNode, "SeatCushion", matSeat, 0.70, 0.10, 0.50,  0, 0.38, -0.40)
+    -- 座椅坐垫（靠近仪表盘一侧）
+    AddBox(S.boatVisNode, "SeatCushion", matSeat, 0.70, 0.10, 0.50,  0, 0.38, -0.18)
+    -- 座椅靠背（坐垫船尾方向，驾驶员背靠此处）
+    AddBox(S.boatVisNode, "SeatBack",    matSeat, 0.70, 0.45, 0.10,  0, 0.60, -0.48)
 
     -- ── 舷外发动机（船尾，挂外侧）───────────────────────────
     -- 发动机上盖（圆柱）
