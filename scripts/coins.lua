@@ -22,12 +22,14 @@ local function BuildCoin()
 end
 
 local function GetCoin()
+    local n
     if #S.coinPool > 0 then
-        local n = table.remove(S.coinPool)
-        n:SetEnabled(true)
-        return n
+        n = table.remove(S.coinPool)
+    else
+        n = BuildCoin()
     end
-    return BuildCoin()
+    n:SetEnabled(true)
+    return n
 end
 
 local function Recycle(n)

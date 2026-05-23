@@ -20,19 +20,50 @@ local M = {}
 
 -- ─────────────────────────────────────────────────────────────
 --  环形路径定义
+--  设计原则：两段直道净转向 0°（S 形弯道相互抵消）+ 两段 180° 大弯
+--  总转向 = 0 + 180 + 0 + 180 = 360° → 数学封闭 ✓
+--  总瓦片 = 120 + 60 + 120 + 60 = 360，周长 ~3600 m
 -- ─────────────────────────────────────────────────────────────
 local LOOP_SEGS = {
-    { tiles = 60, dh = 0.0 },  -- 直道
-    { tiles = 30, dh = 6.0 },  -- 右弯 180°
-    { tiles = 60, dh = 0.0 },  -- 直道
-    { tiles = 30, dh = 6.0 },  -- 右弯 180°
+    -- ── 直道 1（120 瓦片，净 0°，三处 S 形弯道扰动）────────────
+    { tiles = 15, dh =  0.0 },   -- 直行
+    { tiles = 10, dh =  3.5 },   -- 右偏 +35°
+    { tiles = 10, dh = -3.5 },   -- 左回，净  0°
+    { tiles = 20, dh =  0.0 },   -- 直行
+    { tiles =  8, dh = -4.0 },   -- 左偏 −32°
+    { tiles =  8, dh =  4.0 },   -- 右回，净  0°
+    { tiles = 15, dh =  0.0 },   -- 直行
+    { tiles = 10, dh =  4.5 },   -- 右偏 +45°
+    { tiles = 10, dh = -4.5 },   -- 左回，净  0°
+    { tiles = 14, dh =  0.0 },   -- 直行
+    -- 小计：15+10+10+20+8+8+15+10+10+14 = 120 ✓  净 0° ✓
+
+    -- ── 右弯 1（60 瓦片，净 +180°）─────────────────────────────
+    { tiles = 60, dh =  3.0 },   -- 60×3° = 180°
+
+    -- ── 直道 2（120 瓦片，净 0°，三处不同 S 形弯道）────────────
+    { tiles = 12, dh =  0.0 },   -- 直行
+    { tiles = 12, dh =  3.0 },   -- 右偏 +36°
+    { tiles = 12, dh = -3.0 },   -- 左回，净  0°
+    { tiles = 16, dh =  0.0 },   -- 直行
+    { tiles = 10, dh = -3.5 },   -- 左偏 −35°
+    { tiles = 10, dh =  3.5 },   -- 右回，净  0°
+    { tiles = 20, dh =  0.0 },   -- 直行
+    { tiles =  9, dh =  4.0 },   -- 右偏 +36°
+    { tiles =  9, dh = -4.0 },   -- 左回，净  0°
+    { tiles = 10, dh =  0.0 },   -- 直行
+    -- 小计：12+12+12+16+10+10+20+9+9+10 = 120 ✓  净 0° ✓
+
+    -- ── 右弯 2（60 瓦片，净 +180°）─────────────────────────────
+    { tiles = 60, dh =  3.0 },   -- 60×3° = 180°
+    -- 总计：120+60+120+60 = 360 瓦片  总净 360° → 封闭 ✓
 }
 
-local LOOP_N       = 0           -- 总瓦片数（烘焙后 = 180）
+local LOOP_N       = 0           -- 总瓦片数（烘焙后 = 360）
 local loopNodes    = {}          -- { x, z, heading } 中心线节点数组（长度 LOOP_N）
 local loopTiles    = {}          -- 场景节点数组（永久存在，不回收）
 local currentIdx   = 1           -- 船当前所在节点索引
-local lapStartZ    = 0.0         -- 第 0 号节点的 Z，用于圈数检测
+local lapFirstRun  = true        -- 启动时屏蔽假圈数检测
 
 -- 重叠系数（消除瓦片拼接缝隙）
 local WATER_OVERLAP = 1.10
@@ -168,10 +199,15 @@ local function UpdateCurrentIdx(boatX, boatZ)
         end
     end
 
-    -- 检测是否完成一圈（从末尾索引跨回索引 1）
+    -- 检测是否完成一圈（从末尾索引跨回索引 1 附近）
     if bestIdx < currentIdx - SCAN_BACK and currentIdx > LOOP_N - SCAN_FRONT then
-        S.lapCount = S.lapCount + 1
-        U.LogInfo("[Track] 完成第 " .. S.lapCount .. " 圈")
+        if lapFirstRun then
+            -- 游戏启动时船在终点附近，忽略首次假圈数
+            lapFirstRun = false
+        else
+            S.lapCount = S.lapCount + 1
+            U.LogInfo("[Track] 完成第 " .. S.lapCount .. " 圈")
+        end
     end
 
     currentIdx = bestIdx
@@ -223,9 +259,9 @@ end
 
 -- 重置（重新开始游戏）：瓦片不动，只重置索引和圈数
 function M.Reset()
-    currentIdx = 1
-    S.lapCount = 0
-    -- 将船放回到路径起点（调用者负责传送船位置；这里保持接口一致）
+    currentIdx   = 1
+    lapFirstRun  = true   -- 重新屏蔽启动假圈数
+    S.lapCount   = 0
     U.LogInfo("[Track] 重置完成（瓦片保留，圈数归零）")
 end
 
