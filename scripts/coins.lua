@@ -9,6 +9,7 @@ local C     = require "config"
 local S     = require "state"
 local U     = require "utils"
 local Track = require "track"
+local Audio = require "audio"
 
 local M = {}
 
@@ -148,6 +149,7 @@ function M.Update(dt)
             -- 采集碰撞范围适配新尺寸
             if dx < 1.6 and dy < 1.2 and dz < 2.4 then
                 S.coinCount = S.coinCount + 1
+                Audio.PlaySfx("sfx_coin")
                 Recycle(coin)
                 table.remove(S.activeCoins, i)
             else

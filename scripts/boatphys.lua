@@ -7,9 +7,10 @@
 --    · 速度固定扣减（而非乘比例），确保总是真正减速
 --    · 障碍物碰撞与墙壁走同一套反射逻辑，但用障碍物中心→船的方向作为法线
 -- ============================================================
-local C = require "config"
-local S = require "state"
-local U = require "utils"
+local C     = require "config"
+local S     = require "state"
+local U     = require "utils"
+local Audio = require "audio"
 
 local M = {}
 
@@ -49,6 +50,9 @@ local function ApplyHit(nx, nz, logTag, dmgType)
     if TakeDurabilityHit then
         TakeDurabilityHit(dmgType)
     end
+
+    -- 碰撞音效
+    Audio.PlaySfx("sfx_collision")
 
     U.LogInfo(string.format(
         "[BoatPhys] 碰 %s → 目标朝向=%.1f° 速度 %.1f→%.1f",
