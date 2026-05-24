@@ -47,9 +47,13 @@ local function CreateHUD(root)
     hudRoot:SetSize(IntVector2(graphics:GetWidth(), 70))
     hudRoot:SetColor(Color(0, 0, 0, 0))
 
-    S.scoreText = Txt(hudRoot, "得分: 0",  28, 1.0, 1.0, 1.0, 1, HA_LEFT,  VA_TOP,  20, 10)
-    S.coinText  = Txt(hudRoot, "金币: 0",  24, 1.0, 0.88, 0.0, 1, HA_LEFT,  VA_TOP,  20, 46)
-    S.speedText = Txt(hudRoot, "0 km/h",   22, 0.4, 1.0, 1.0, 1, HA_RIGHT, VA_TOP, -20, 10)
+    S.scoreText = Txt(hudRoot, "得分: 0", 28, 1.0, 1.0,  1.0, 1, HA_LEFT, VA_TOP, 20, 10)
+    S.coinText  = Txt(hudRoot, "金币: 0", 24, 1.0, 0.88, 0.0, 1, HA_LEFT, VA_TOP, 20, 46)
+
+    -- 速度文字直接挂在 uiRoot（全屏），用 HA_RIGHT 锚定右边缘，不受 hudRoot 宽度影响
+    S.speedText = Txt(root, "0 km/h", 22, 0.4, 1.0, 1.0, 1, HA_RIGHT, VA_TOP, -20, 10)
+    S.speedText:SetVisible(false)
+
     hudRoot:SetVisible(false)
 
     S.hintText = Txt(root, "A/D 转向  W 加速  S 刹车",
@@ -278,9 +282,10 @@ function M.Init()
 end
 
 function M.StartGame()
-    if startRoot  then startRoot:SetVisible(false) end
-    if hudRoot    then hudRoot:SetVisible(true) end
-    if S.hintText then S.hintText:SetVisible(true); S.hintText:SetOpacity(1.0) end
+    if startRoot   then startRoot:SetVisible(false) end
+    if hudRoot     then hudRoot:SetVisible(true) end
+    if S.speedText then S.speedText:SetVisible(true) end
+    if S.hintText  then S.hintText:SetVisible(true); S.hintText:SetOpacity(1.0) end
 end
 
 function M.Update(dt)

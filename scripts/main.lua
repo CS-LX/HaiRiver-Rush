@@ -226,6 +226,7 @@ function HandleUpdate(eventType, eventData)
 
     HandleKeyboard(dt)
     UI.Update(dt)
+    Audio.Update(dt)   -- BGM 重试（资源首帧未就绪时）
 
     -- menu 状态：只更新相机和水面动画，船不移动
     if S.gameState == "menu" then

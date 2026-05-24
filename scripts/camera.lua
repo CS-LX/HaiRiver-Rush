@@ -54,6 +54,10 @@ function M.Init()
     cam:SetFov(70.0)
     renderer:SetViewport(0, Viewport:new(S.mainScene, cam))
 
+    -- SoundListener 必须挂在相机节点上，引擎才会激活音频输出
+    S.cameraNode:CreateComponent("SoundListener")
+    audio:SetListener(S.cameraNode:GetComponent("SoundListener"))
+
     -- 启动时对齐船头，避免补偿抖动
     camYaw = S.boatHeading
 

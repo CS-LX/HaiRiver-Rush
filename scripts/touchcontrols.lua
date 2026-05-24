@@ -31,10 +31,12 @@ local ALPHA_HOLD = 0.80
 local buttons = {}
 
 -- ── 辅助：创建单个虚拟按钮 ────────────────────────────────────
-local function MakeBtn(parent, label, x, y)
+--   hAlign = HA_LEFT 或 HA_RIGHT，x 为相对该侧边缘的偏移（正数向内）
+local function MakeBtn(parent, label, hAlign, x, y)
     local root = parent:CreateChild("BorderImage")
-    root:SetAlignment(HA_LEFT, VA_BOTTOM)
+    root:SetAlignment(hAlign, VA_BOTTOM)
     root:SetSize(IntVector2(BTN_SIZE, BTN_SIZE))
+    -- HA_LEFT：正 x 向右；HA_RIGHT：负 x 向左（SetPosition 直接用原始值）
     root:SetPosition(IntVector2(x, -y))
     root:SetColor(Color(0.1, 0.25, 0.55, ALPHA_IDLE))
 
@@ -74,22 +76,22 @@ local TINT = {
 -- ─────────────────────────────────────────────────────────────
 function M.Init()
     local uiRoot = ui:GetRoot()
-    local sw     = graphics:GetWidth()
 
-    -- 左侧：左转（最左）、右转（右边紧邻）
+    -- 左侧（HA_LEFT）：左转、右转，x 从左边缘向右量
     local lx1 = MARGIN_X
     local lx2 = MARGIN_X + BTN_SIZE + BTN_GAP
 
-    -- 右侧：加速（右侧靠内），刹车（最右）
-    local rx2 = sw - MARGIN_X - BTN_SIZE          -- 刹车 x
-    local rx1 = rx2 - BTN_SIZE - BTN_GAP          -- 加速 x
+    -- 右侧（HA_RIGHT）：刹车紧靠右边缘，加速在刹车左边
+    -- HA_RIGHT 时 SetPosition x 为负数 = 向左偏移
+    local rx_brake = -(MARGIN_X)                        -- 刹车：距右边缘 MARGIN_X
+    local rx_accel = -(MARGIN_X + BTN_SIZE + BTN_GAP)   -- 加速：刹车再左移一格
 
-    local by = MARGIN_BOT   -- 距底部高度（VA_BOTTOM 时正数 = 向上）
+    local by = MARGIN_BOT   -- 距底部高度
 
-    buttons.left  = MakeBtn(uiRoot, "<",  lx1, by)
-    buttons.right = MakeBtn(uiRoot, ">",  lx2, by)
-    buttons.accel = MakeBtn(uiRoot, "W",  rx1, by)
-    buttons.brake = MakeBtn(uiRoot, "S",  rx2, by)
+    buttons.left  = MakeBtn(uiRoot, "<", HA_LEFT,  lx1,      by)
+    buttons.right = MakeBtn(uiRoot, ">", HA_LEFT,  lx2,      by)
+    buttons.accel = MakeBtn(uiRoot, "W", HA_RIGHT, rx_accel, by)
+    buttons.brake = MakeBtn(uiRoot, "S", HA_RIGHT, rx_brake, by)
 
     -- 初始隐藏（游戏开始后显示）
     M.SetVisible(false)
