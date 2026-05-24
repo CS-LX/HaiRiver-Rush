@@ -36,7 +36,9 @@ return {
             spanX      = 14,
             heightMin  = 48,
             heightMax  = 80,
-            curtainWall = true,
+            curtainWall  = true,
+            glassColor   = { 0.04, 0.30, 0.22 },  -- 固定青翠绿（匹配 teal 名称）
+            glassRoughness = 0.05, glassMetallic = 0.76,
             winYStart   = 0.02,
             winYEnd     = 0.96,
             parts = {
@@ -156,7 +158,9 @@ return {
             spanX      = 18,
             heightMin  = 55,
             heightMax  = 85,
-            curtainWall = true,
+            curtainWall  = true,
+            glassColor   = { 0.16, 0.06, 0.30 },  -- 固定深蓝紫（暗色退台风格）
+            glassRoughness = 0.05, glassMetallic = 0.80,
             winYStart   = 0.01,
             winYEnd     = 0.97,
             parts = {
@@ -428,7 +432,9 @@ return {
             spanX      = 20,
             heightMin  = 90,
             heightMax  = 115,
-            curtainWall = true,
+            curtainWall  = true,
+            glassColor   = { 0.04, 0.18, 0.42 },  -- 固定亮天蓝（超高层标志色）
+            glassRoughness = 0.04, glassMetallic = 0.84,
             winYStart   = 0.01,
             winYEnd     = 0.98,
             parts = {
@@ -492,7 +498,9 @@ return {
             spanX      = 40,
             heightMin  = 52,
             heightMax  = 52,
-            curtainWall = true,  -- 使用幕墙系统（整面玻璃板 + 楼板带 + 竖挺）
+            curtainWall  = true,  -- 使用幕墙系统（整面玻璃板 + 楼板带 + 竖挺）
+            glassColor   = { 0.04, 0.07, 0.18 },  -- 固定深海蓝（门形地标标志色）
+            glassRoughness = 0.04, glassMetallic = 0.82,
             winYStart  = 0.28,   -- 从基座顶（yTop=0.28）开始
             winYEnd    = 0.70,   -- 到顶桥底（yBottom=0.70）结束
             -- 幕墙分区：双柱 + 顶横梁（每组可独立指定 Y 范围）

@@ -254,16 +254,37 @@ local CW_FLOOR_H   = 3.4    -- 层高（m）
 local CW_MULL_STEP = 2.6    -- 竖挺间距（m）
 
 ---@type Material|nil
-local cwGlassMat  = nil
----@type Material|nil
 local cwConcrMat  = nil
 
+-- 7 种鲜艳幕墙玻璃调色板（高金属度 + 极低粗糙度，接近镜面反射）
+local CW_GLASS_PALETTE = {
+    { color = {0.04, 0.08, 0.22}, roughness = 0.04, metallic = 0.82 }, -- 深海蓝
+    { color = {0.04, 0.20, 0.32}, roughness = 0.05, metallic = 0.78 }, -- 水鸭蓝
+    { color = {0.04, 0.28, 0.18}, roughness = 0.05, metallic = 0.76 }, -- 翡翠绿
+    { color = {0.26, 0.14, 0.04}, roughness = 0.06, metallic = 0.80 }, -- 铜棕金
+    { color = {0.14, 0.06, 0.28}, roughness = 0.05, metallic = 0.78 }, -- 紫罗兰
+    { color = {0.04, 0.16, 0.40}, roughness = 0.04, metallic = 0.82 }, -- 亮天蓝
+    { color = {0.05, 0.24, 0.24}, roughness = 0.05, metallic = 0.76 }, -- 青碧
+}
+
 local function EnsureCwMats()
-    if cwGlassMat then return end
-    -- 深黑蓝反射玻璃（高金属度，接近镜面）
-    cwGlassMat = GetMat({ color = {0.04, 0.07, 0.16}, roughness = 0.04, metallic = 0.80 })
-    -- 浅暖灰混凝土格条
-    cwConcrMat = GetMat({ color = {0.72, 0.68, 0.60}, roughness = 0.82, metallic = 0.0  })
+    if cwConcrMat then return end
+    -- 浅暖灰混凝土格条（所有建筑共用）
+    cwConcrMat = GetMat({ color = {0.72, 0.68, 0.60}, roughness = 0.82, metallic = 0.0 })
+    -- 预热调色板所有材质
+    for _, g in ipairs(CW_GLASS_PALETTE) do GetMat(g) end
+end
+
+--- 选取幕墙玻璃材质：优先用 def.glassColor；否则按建筑世界坐标确定性选调色板
+local function PickCwGlassMat(def, wx, wz)
+    if def.glassColor then
+        return GetMat({ color = def.glassColor,
+                        roughness = def.glassRoughness or 0.04,
+                        metallic  = def.glassMetallic  or 0.80 })
+    end
+    -- 用坐标哈希保证相邻建筑颜色不同，且每次生成稳定
+    local idx = (math.floor(math.abs(wx) * 7 + math.abs(wz) * 3)) % #CW_GLASS_PALETTE + 1
+    return GetMat(CW_GLASS_PALETTE[idx])
 end
 
 --- 在建筑两侧立面（±X 面）上生成玻璃幕墙
@@ -276,9 +297,12 @@ end
 ---@param root   Node
 ---@param def    table
 ---@param height number
-local function AddCurtainWallToFacade(root, def, height)
+---@param wx     number  建筑世界坐标 X（用于确定性选色）
+---@param wz     number  建筑世界坐标 Z（用于确定性选色）
+local function AddCurtainWallToFacade(root, def, height, wx, wz)
     if not def.curtainWall then return end
     EnsureCwMats()
+    local glassMat = PickCwGlassMat(def, wx or 0, wz or 0)
 
     local spanX         = def.spanX
     local defYFracStart = def.winYStart or 0.03
@@ -318,7 +342,7 @@ local function AddCurtainWallToFacade(root, def, height)
             gn:SetScale(Vector3(CW_GLASS_D, totalH, groupW))
             local smg = gn:CreateComponent("StaticModel")
             smg:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
-            smg:SetMaterial(cwGlassMat)
+            smg:SetMaterial(glassMat)
 
             -- ② 横向楼板带（每层一道，凸出玻璃面）
             local nFloors = math.max(1, math.floor(totalH / CW_FLOOR_H))
@@ -414,7 +438,7 @@ local function SpawnBuilding(def, height, wx, wz, rotY)
 
     -- 生成立面装饰：幕墙 或 逐窗网格（二选一）
     if def.curtainWall then
-        AddCurtainWallToFacade(root, def, height)
+        AddCurtainWallToFacade(root, def, height, wx, wz)
     else
         AddWindowsToFacade(root, def, height)
     end
