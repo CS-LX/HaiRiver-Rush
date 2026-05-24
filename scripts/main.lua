@@ -17,6 +17,7 @@ local UI         = require "ui"
 local ThrottleUI = require "throttleui"
 local Water      = require "water"
 local Particles  = require "particles"
+local Vegetation = require "vegetation"
 
 -- ─────────────────────────────────────────────────────────────
 --  耐久度扣减（全局，供 boatphys.lua 调用）
@@ -153,6 +154,7 @@ function Start()
 
     SceneMod.Init()
     Track.Init()
+    Vegetation.Init() -- 沿岸草坪与树木（依赖 Track.Init 写入 S.trackPath）
     Water.Init()      -- 动态波浪水面（替代 Track 瓦片水面）
     Boat.Init()
     Particles.Init()  -- 必须在 Boat.Init() 之后（需要 S.boatVisNode）

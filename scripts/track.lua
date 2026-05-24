@@ -216,6 +216,10 @@ local function BakeLoop()
         local midX = (prevX + n.x) * 0.5
         local midZ = (prevZ + n.z) * 0.5
 
+        -- 把瓦片中点存入 loopNodes，供 vegetation.lua 做世界坐标变换
+        n.midX = midX
+        n.midZ = midZ
+
         local tile = CreateTileNode(n.dh)
         -- 先设位置再 Enable，保证静态物理体在正确位置初始化
         tile:SetPosition(Vector3(midX, -0.05, midZ))
