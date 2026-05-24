@@ -64,7 +64,7 @@ M.DUR_REGEN_THR   = 0.50     -- 油门低于此值才回血
 M.OBS_HIT_CD      = 0.8      -- 障碍物碰撞冷却（秒）
 
 -- 跳跃
-M.JUMP_VY         = 9.0      -- 起跳初速度（m/s）
+M.JUMP_VY         = 15.6     -- 起跳初速度（m/s）（峰值高度约为原来3倍）
 M.JUMP_GRAVITY    = 22.0     -- 跳跃重力加速度（m/s²）
 M.JUMP_MIN_Y      = 1.8      -- 超过此高度才能跳过游船（m）
 M.JUMP_SHORE_Y    = 0.5      -- 超过此高度且落在岸上判定撞岸（m）
