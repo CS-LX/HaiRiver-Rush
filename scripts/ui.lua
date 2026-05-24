@@ -142,18 +142,8 @@ local function BuildLeaderRows(panel, rows, panelH)
     end
 end
 
-local function FetchLeaderboard(panel, panelH, myScore)
-    if not clientCloud then
-        Txt(panel, "（离线模式，无排行榜）",
-            16, 0.7, 0.8, 1.0, 0.7, HA_CENTER, VA_TOP, 0, 112)
-        return
-    end
-
-    -- 先提交本次成绩（只在有效成绩时）
-    if myScore > 0 then
-        clientCloud:SetInt("high_score", myScore, {})
-    end
-
+-- 拉取排行榜数据并渲染
+local function DoFetchRankList(panel, panelH)
     local loadingN = Txt(panel, "排行榜加载中...",
                          16, 0.7, 0.8, 1.0, 0.7, HA_CENTER, VA_TOP, 0, 120)
     table.insert(leaderEntries, loadingN)
@@ -196,6 +186,46 @@ local function FetchLeaderboard(panel, panelH, myScore)
         fail = function()
             ClearLeaderRows()
             Txt(panel, "排行榜获取失败", 16, 0.9, 0.4, 0.4, 1, HA_CENTER, VA_TOP, 0, 120)
+        end,
+    })
+end
+
+-- 提交最高分后再拉取排行榜
+-- 流程：Get旧值 → 仅新高时SetInt → 写入成功回调里拉取榜单（保证顺序）
+local function FetchLeaderboard(panel, panelH, myScore)
+    if not clientCloud then
+        Txt(panel, "（离线模式，无排行榜）",
+            16, 0.7, 0.8, 1.0, 0.7, HA_CENTER, VA_TOP, 0, 112)
+        return
+    end
+
+    if myScore <= 0 then
+        -- 没有有效分数，直接拉榜
+        DoFetchRankList(panel, panelH)
+        return
+    end
+
+    -- 先读旧的最高分，再决定是否写入
+    clientCloud:Get("high_score", {
+        ok = function(_, iscores)
+            local oldBest = (iscores and iscores.high_score) or 0
+            if myScore > oldBest then
+                -- 新纪录：写入后再拉榜（保证榜单包含本次成绩）
+                clientCloud:SetInt("high_score", myScore, {
+                    ok   = function() DoFetchRankList(panel, panelH) end,
+                    fail = function() DoFetchRankList(panel, panelH) end,
+                })
+            else
+                -- 非最高分：直接拉榜
+                DoFetchRankList(panel, panelH)
+            end
+        end,
+        fail = function()
+            -- 读取失败时仍尝试写入（保底）
+            clientCloud:SetInt("high_score", myScore, {
+                ok   = function() DoFetchRankList(panel, panelH) end,
+                fail = function() DoFetchRankList(panel, panelH) end,
+            })
         end,
     })
 end
