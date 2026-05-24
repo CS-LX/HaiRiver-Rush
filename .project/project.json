@@ -5,7 +5,7 @@
     "id": "771520039"
   },
   "entry": "main.lua",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "taptap_publish": {
     "title": "海河冲刺",
     "description": "天津海河——急速赛艇体验\n\n来到了天津卫，嘛也没学会\n学会了开赛艇，创死了二百多",
@@ -40,11 +40,11 @@
     "cover_vertical_url": "https://tapcode-sce.spark.xd.com/assets/game_material/海河冲刺/COVER_VERTICAL_2026-05-24T05-54-53_01.png"
   },
   "metadata": {
-    "updated_at": "2026-05-24T05:57:15.982Z",
+    "updated_at": "2026-05-24T06:18:01.533Z",
     "promo_dependent_hash": "d4309590e391cb2686dc72f59b361cc9"
   },
   "test_qrcode": {
-    "url": "https://tapcode-sce.spark.xd.com/qrcode/p_9as1_1779601988558.png",
-    "generated_at": "2026-05-24T05:53:08.686Z"
+    "url": "https://tapcode-sce.spark.xd.com/qrcode/p_9as1_1779603481377.png",
+    "generated_at": "2026-05-24T06:18:01.533Z"
   }
 }
