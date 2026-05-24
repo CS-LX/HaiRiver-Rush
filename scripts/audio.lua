@@ -40,13 +40,24 @@ function M.Init(scene)
     sfxNode = scene:CreateChild("SFX")
 end
 
--- 在主循环中调用（每帧），处理首次加载失败的重试
+-- 在主循环中调用（每帧）
+-- 1. 首次加载失败时每 0.5 秒重试
+-- 2. 播放结束后自动重播（MP3 压缩格式 SetLooped 不可靠，用轮询保底）
 function M.Update(dt)
-    if bgmPlayed then return end
-    retryTimer = retryTimer + dt
-    -- 每 0.5 秒重试一次，最多等 10 秒
-    if retryTimer >= 0.5 then
-        retryTimer = 0.0
+    if not musicSource then return end
+
+    if not bgmPlayed then
+        -- 首次加载重试
+        retryTimer = retryTimer + dt
+        if retryTimer >= 0.5 then
+            retryTimer = 0.0
+            TryPlayBGM()
+        end
+        return
+    end
+
+    -- 已成功播放过：检测是否停止，停止则重播
+    if not musicSource:IsPlaying() then
         TryPlayBGM()
     end
 end
