@@ -100,16 +100,79 @@ end
 --  草坪材质（仅创建一次）
 -- ─────────────────────────────────────────────────────────────
 ---@type Material|nil
-local grassMat = nil
+local grassMat    = nil
+---@type Material|nil
+local flowerMatPink   = nil
+---@type Material|nil
+local flowerMatYellow = nil
 
 local function GetGrassMat()
     if grassMat then return grassMat end
     grassMat = Material:new()
     grassMat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
-    grassMat:SetShaderParameter("MatDiffColor", Variant(Vector4(0.22, 0.55, 0.18, 1.0)))
+    grassMat:SetShaderParameter("MatDiffColor", Variant(Vector4(0.12, 0.78, 0.10, 1.0)))
     grassMat:SetShaderParameter("Roughness",    Variant(0.9))
     grassMat:SetShaderParameter("Metallic",     Variant(0.0))
     return grassMat
+end
+
+local function GetFlowerMat(pink)
+    if pink then
+        if flowerMatPink then return flowerMatPink end
+        flowerMatPink = Material:new()
+        flowerMatPink:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
+        flowerMatPink:SetShaderParameter("MatDiffColor", Variant(Vector4(0.95, 0.38, 0.60, 1.0)))
+        flowerMatPink:SetShaderParameter("Roughness",    Variant(0.8))
+        flowerMatPink:SetShaderParameter("Metallic",     Variant(0.0))
+        return flowerMatPink
+    else
+        if flowerMatYellow then return flowerMatYellow end
+        flowerMatYellow = Material:new()
+        flowerMatYellow:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
+        flowerMatYellow:SetShaderParameter("MatDiffColor", Variant(Vector4(1.0, 0.88, 0.08, 1.0)))
+        flowerMatYellow:SetShaderParameter("Roughness",    Variant(0.75))
+        flowerMatYellow:SetShaderParameter("Metallic",     Variant(0.0))
+        return flowerMatYellow
+    end
+end
+
+-- ─────────────────────────────────────────────────────────────
+--  生成一簇花（5～8 朵，每朵 = Cone 茎 + Sphere 花冠）
+-- ─────────────────────────────────────────────────────────────
+local function SpawnFlowerCluster(wx, wz, flowerMat)
+    -- 绿色茎秆材质（整个场景共用一份）
+    if not M._stemMat then
+        M._stemMat = Material:new()
+        M._stemMat:SetTechnique(0, cache:GetResource("Technique", "Techniques/PBR/PBRNoTexture.xml"))
+        M._stemMat:SetShaderParameter("MatDiffColor", Variant(Vector4(0.18, 0.62, 0.12, 1.0)))
+        M._stemMat:SetShaderParameter("Roughness",    Variant(0.9))
+        M._stemMat:SetShaderParameter("Metallic",     Variant(0.0))
+    end
+
+    local count = 5 + math.floor(LcgRand() * 4)   -- 5～8 朵
+    for _ = 1, count do
+        local ox     = (LcgRand() - 0.5) * 1.6     -- 散布范围 ±0.8m
+        local oz     = (LcgRand() - 0.5) * 1.6
+        local stemH  = 0.55 + LcgRand() * 0.35     -- 茎高 0.55～0.90m
+        local headR  = 0.28 + LcgRand() * 0.18     -- 花冠半径 0.28～0.46m
+
+        -- 茎（Cone，尖端朝上）
+        local stemNode = S.mainScene:CreateChild("FlowerStem")
+        stemNode:SetPosition(Vector3(wx + ox, GROUND_Y + stemH * 0.5, wz + oz))
+        stemNode:SetRotation(Quaternion(180, 0, 0))    -- Cone 尖端朝上
+        stemNode:SetScale(Vector3(0.10, stemH, 0.10))
+        local stemSm = stemNode:CreateComponent("StaticModel")
+        stemSm:SetModel(cache:GetResource("Model", "Models/Cone.mdl"))
+        stemSm:SetMaterial(M._stemMat)
+
+        -- 花冠（Sphere，扁球形）
+        local headNode = S.mainScene:CreateChild("FlowerHead")
+        headNode:SetPosition(Vector3(wx + ox, GROUND_Y + stemH + headR * 0.55, wz + oz))
+        headNode:SetScale(Vector3(headR * 2.2, headR * 1.4, headR * 2.2))
+        local headSm = headNode:CreateComponent("StaticModel")
+        headSm:SetModel(cache:GetResource("Model", "Models/Sphere.mdl"))
+        headSm:SetMaterial(flowerMat)
+    end
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -164,6 +227,16 @@ local function SpawnForSide(tileIdx, xSign, n)
         local wx, wz = LocalToWorld(midX, midZ, heading, lx, lz)
         local tDef  = TREES[RandInt(#TREES)]
         SpawnPlant(tDef, wx, wz, RandRange(tDef.scaleMin, tDef.scaleMax), RandRange(0, 360))
+    end
+
+    -- ── 花簇：每 3 块瓦片生成一簇，粉/黄交替，散布在草坪内侧 ──
+    if tileIdx % 3 == 0 then
+        LcgSeed(seed0 + 90)
+        local lx  = xSign * RandRange(GRASS_X0 + 0.8, GRASS_X0 + 5.0)
+        local lz  = RandRange(-C.TILE_LEN * 0.35, C.TILE_LEN * 0.35)
+        local wx, wz = LocalToWorld(midX, midZ, heading, lx, lz)
+        local isPink = ((tileIdx // 3 + (xSign == 1 and 1 or 0)) % 2 == 0)
+        SpawnFlowerCluster(wx, wz, GetFlowerMat(isPink))
     end
 end
 

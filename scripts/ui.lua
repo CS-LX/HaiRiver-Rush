@@ -11,29 +11,29 @@ function M.Init()
     local font = cache:GetResource("Font", "Fonts/Anonymous Pro.ttf")
 
     S.scoreText = S.uiRoot:CreateChild("Text")
-    S.scoreText:SetFont(font, 26)
-    S.scoreText:SetColor(Color(1, 1, 1))
+    S.scoreText:SetFont(font, 28)
+    S.scoreText:SetColor(Color(1.0, 1.0, 1.0))          -- 纯白，最大可读性
     S.scoreText:SetAlignment(HA_LEFT, VA_TOP)
     S.scoreText:SetPosition(IntVector2(20, 20))
     S.scoreText:SetText("得分: 0")
 
     S.coinText = S.uiRoot:CreateChild("Text")
-    S.coinText:SetFont(font, 23)
-    S.coinText:SetColor(Color(1.0, 0.85, 0.0))
+    S.coinText:SetFont(font, 24)
+    S.coinText:SetColor(Color(1.0, 0.88, 0.0))          -- 鲜亮金色
     S.coinText:SetAlignment(HA_LEFT, VA_TOP)
-    S.coinText:SetPosition(IntVector2(20, 54))
+    S.coinText:SetPosition(IntVector2(20, 58))
     S.coinText:SetText("金币: 0")
 
     S.speedText = S.uiRoot:CreateChild("Text")
-    S.speedText:SetFont(font, 19)
-    S.speedText:SetColor(Color(0.6, 0.92, 1.0))
+    S.speedText:SetFont(font, 22)
+    S.speedText:SetColor(Color(0.4, 1.0, 1.0))          -- 亮青色，醒目
     S.speedText:SetAlignment(HA_RIGHT, VA_TOP)
     S.speedText:SetPosition(IntVector2(-20, 20))
     S.speedText:SetText("0 km/h")
 
     S.hintText = S.uiRoot:CreateChild("Text")
-    S.hintText:SetFont(font, 17)
-    S.hintText:SetColor(Color(1.0, 1.0, 0.6, 1.0))
+    S.hintText:SetFont(font, 18)
+    S.hintText:SetColor(Color(1.0, 1.0, 0.5, 1.0))      -- 明黄，底部提示
     S.hintText:SetAlignment(HA_CENTER, VA_BOTTOM)
     S.hintText:SetPosition(IntVector2(0, -28))
     S.hintText:SetText("A/D 转向  ·  W 加速  ·  S 刹车")

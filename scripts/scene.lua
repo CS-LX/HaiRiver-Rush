@@ -29,7 +29,7 @@ function M.Init()
     --   fogColor 和天空地平线色保持一致，避免远处色差线
     local zone = lgNode:GetComponent("Zone", true)
     if zone then
-        zone.fogColor = Color(0.76, 0.88, 0.98)   -- 与天空地平线 horizon 色对齐
+        zone.fogColor = Color(0.62, 0.88, 1.00)   -- 与天空地平线 horizon 色对齐（明亮天蓝）
         zone.fogStart = 300.0                      -- 300m 开始淡入雾
         zone.fogEnd   = 600.0                      -- 600m 完全融入背景
         zone.fogDensity = 0.85                     -- 稍减深度雾浓度，让远景更通透
@@ -42,11 +42,11 @@ function M.Init()
     --   horizon = 淡蓝地平线（≈ fogColor，无缝衔接）
     --   ground  = 深灰地面（相机不会看到地面，但防止 cubemap 翻转时露底）
     SkyUtils.CreateGradientSky(S.mainScene, {
-        zenith   = Color(0.10, 0.28, 0.72),   -- 深蓝天顶
-        horizon  = Color(0.76, 0.88, 0.98),   -- 淡蓝地平线（与 fogColor 一致）
-        ground   = Color(0.30, 0.38, 0.45),   -- 灰蓝地面
-        skyExp   = 0.45,                       -- 渐变偏向地平线，更自然
-        hdrBoost = 2.2,                        -- 补偿 ACES，防止天空偏暗
+        zenith   = Color(0.05, 0.36, 0.92),   -- 鲜艳饱和蓝天顶
+        horizon  = Color(0.62, 0.88, 1.00),   -- 明亮天蓝地平线（与 fogColor 一致）
+        ground   = Color(0.50, 0.78, 0.92),   -- 浅蓝地面（无灰色调）
+        skyExp   = 0.42,                       -- 渐变偏向地平线，更自然
+        hdrBoost = 2.4,                        -- 补偿 ACES，让天空更亮更通透
     })
 
     U.LogInfo("[Scene] 初始化完毕（LightGroup/Daytime + 渐变天空，视距 300-600m，farClip 1200m）")

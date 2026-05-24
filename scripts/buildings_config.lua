@@ -246,22 +246,22 @@ return {
                 {   -- 石材基座
                     yBottom = 0.00, yTop = 0.13,
                     xScale = 1.02, zScale = 1.02,
-                    color = { 0.78, 0.72, 0.60 }, roughness = 0.84, metallic = 0.0,
+                    color = { 0.88, 0.80, 0.60 }, roughness = 0.82, metallic = 0.0,
                 },
-                {   -- 主体（奶白石材）
+                {   -- 主体（明亮奶黄石材）
                     yBottom = 0.11, yTop = 0.76,
                     xScale = 1.00, zScale = 1.00,
-                    color = { 0.93, 0.89, 0.78 }, roughness = 0.72, metallic = 0.0,
+                    color = { 0.98, 0.94, 0.72 }, roughness = 0.65, metallic = 0.0,
                 },
                 {   -- 主檐线脚（挑出）
                     yBottom = 0.74, yTop = 0.83,
                     xScale = 1.12, zScale = 1.12,
-                    color = { 0.83, 0.77, 0.65 }, roughness = 0.75, metallic = 0.0,
+                    color = { 0.90, 0.82, 0.60 }, roughness = 0.72, metallic = 0.0,
                 },
-                {   -- 法式孟莎屋顶（深石板灰）
+                {   -- 法式孟莎屋顶（铜绿蓝石板，典型法式风格）
                     yBottom = 0.81, yTop = 1.00,
                     xScale = 1.16, zScale = 1.16,
-                    color = { 0.17, 0.15, 0.13 }, roughness = 0.88, metallic = 0.03,
+                    color = { 0.12, 0.38, 0.36 }, roughness = 0.72, metallic = 0.18,
                 },
             },
         },
@@ -287,28 +287,28 @@ return {
                 {   model = "Box",
                     yBottom = 0.00, yTop = 0.10,
                     xScale = 1.03, zScale = 1.03,
-                    color = { 0.60, 0.55, 0.44 }, roughness = 0.84, metallic = 0.0,
+                    color = { 0.70, 0.62, 0.44 }, roughness = 0.82, metallic = 0.0,
                 },
 
-                -- ── 主体立面（砂黄石材）────────────────────────
+                -- ── 主体立面（暖金黄石材）──────────────────────
                 {   model = "Box",
                     yBottom = 0.08, yTop = 0.70,
                     xScale = 1.00, zScale = 1.00,
-                    color = { 0.84, 0.77, 0.60 }, roughness = 0.72, metallic = 0.0,
+                    color = { 0.96, 0.86, 0.52 }, roughness = 0.68, metallic = 0.0,
                 },
 
                 -- ── 中层腰线──────────────────────────────────
                 {   model = "Box",
                     yBottom = 0.38, yTop = 0.44,
                     xScale = 1.04, zScale = 1.04,
-                    color = { 0.72, 0.66, 0.52 }, roughness = 0.78, metallic = 0.0,
+                    color = { 0.82, 0.72, 0.42 }, roughness = 0.74, metallic = 0.0,
                 },
 
                 -- ── 主檐口────────────────────────────────────
                 {   model = "Box",
                     yBottom = 0.65, yTop = 0.73,
                     xScale = 1.06, zScale = 1.06,
-                    color = { 0.68, 0.62, 0.50 }, roughness = 0.80, metallic = 0.0,
+                    color = { 0.76, 0.68, 0.40 }, roughness = 0.76, metallic = 0.0,
                 },
 
                 -- ── 红色坡屋顶：左翼（offsetZ=-13m）────────────
@@ -316,21 +316,21 @@ return {
                     yBottom = 0.70, yTop = 0.90,
                     xScale = 0.96, zScale = 0.46,
                     offsetZ = -13.0,
-                    color = { 0.62, 0.14, 0.08 }, roughness = 0.70, metallic = 0.0,
+                    color = { 0.76, 0.12, 0.06 }, roughness = 0.65, metallic = 0.0,
                 },
                 -- ── 红色坡屋顶：右翼（offsetZ=+13m）────────────
                 {   model = "Box",
                     yBottom = 0.70, yTop = 0.90,
                     xScale = 0.96, zScale = 0.46,
                     offsetZ = 13.0,
-                    color = { 0.62, 0.14, 0.08 }, roughness = 0.70, metallic = 0.0,
+                    color = { 0.76, 0.12, 0.06 }, roughness = 0.65, metallic = 0.0,
                 },
                 -- ── 红色坡屋顶：中央（略高）──────────────────
                 {   model = "Box",
                     yBottom = 0.70, yTop = 0.94,
                     xScale = 0.94, zScale = 0.34,
                     offsetZ = 0.0,
-                    color = { 0.60, 0.13, 0.08 }, roughness = 0.68, metallic = 0.0,
+                    color = { 0.74, 0.11, 0.05 }, roughness = 0.62, metallic = 0.0,
                 },
 
                 -- ── 侧翼山墙线脚（左端）────────────────────────
@@ -353,14 +353,14 @@ return {
                     yBottom = 0.86, yTop = 0.99,
                     absSize = 8.0,
                     offsetZ = 0.0,
-                    color = { 0.80, 0.73, 0.58 }, roughness = 0.74, metallic = 0.0,
+                    color = { 0.96, 0.90, 0.68 }, roughness = 0.68, metallic = 0.0,
                 },
-                -- ── 中央大半球（直径 8m）──────────────────────
+                -- ── 中央大半球（直径 8m，鲜红穹顶）──────────
                 {   model = "Hemisphere",
                     yBottom = 0.98, yTop = 1.36,
                     absSize = 8.0,
                     offsetZ = 0.0,
-                    color = { 0.58, 0.12, 0.07 }, roughness = 0.60, metallic = 0.05,
+                    color = { 0.78, 0.10, 0.05 }, roughness = 0.52, metallic = 0.06,
                 },
 
                 -- ── 左侧穹顶鼓座（直径 5m，offsetZ=-12m）───────
@@ -368,14 +368,14 @@ return {
                     yBottom = 0.88, yTop = 0.97,
                     absSize = 5.0,
                     offsetZ = -12.0,
-                    color = { 0.78, 0.71, 0.57 }, roughness = 0.76, metallic = 0.0,
+                    color = { 0.96, 0.90, 0.68 }, roughness = 0.68, metallic = 0.0,
                 },
                 -- ── 左侧小半球（直径 5m）──────────────────────
                 {   model = "Hemisphere",
                     yBottom = 0.96, yTop = 1.19,
                     absSize = 5.0,
                     offsetZ = -12.0,
-                    color = { 0.56, 0.11, 0.07 }, roughness = 0.62, metallic = 0.05,
+                    color = { 0.76, 0.10, 0.05 }, roughness = 0.54, metallic = 0.06,
                 },
 
                 -- ── 右侧穹顶鼓座（直径 5m，offsetZ=+12m）───────
@@ -383,14 +383,14 @@ return {
                     yBottom = 0.88, yTop = 0.97,
                     absSize = 5.0,
                     offsetZ = 12.0,
-                    color = { 0.78, 0.71, 0.57 }, roughness = 0.76, metallic = 0.0,
+                    color = { 0.96, 0.90, 0.68 }, roughness = 0.68, metallic = 0.0,
                 },
                 -- ── 右侧小半球（直径 5m）──────────────────────
                 {   model = "Hemisphere",
                     yBottom = 0.96, yTop = 1.19,
                     absSize = 5.0,
                     offsetZ = 12.0,
-                    color = { 0.56, 0.11, 0.07 }, roughness = 0.62, metallic = 0.05,
+                    color = { 0.76, 0.10, 0.05 }, roughness = 0.54, metallic = 0.06,
                 },
             },
         },
