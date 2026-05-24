@@ -19,14 +19,11 @@ local Water      = require "water"
 local Particles  = require "particles"
 local Vegetation = require "vegetation"
 local Buildings  = require "buildings"
+local Audio      = require "audio"
 
 -- ─────────────────────────────────────────────────────────────
 --  耐久度扣减（全局，供 boatphys.lua 调用）
 -- ─────────────────────────────────────────────────────────────
--- 计算各碰撞类型的伤害量
---   墙壁：基础 0.15 + 速度系数 0.10×(speed/SPEED_MAX)
---   浮标：固定 0.10
---   游船：固定 0.22
 local function CalcDamage(source)
     if source == "wall" then
         local speedRatio = S.speed / C.SPEED_MAX
@@ -50,11 +47,22 @@ function TakeDurabilityHit(source)
     end
 end
 
+-- ─────────────────────────────────────────────────────────────
+--  开始游戏（menu → playing）
+-- ─────────────────────────────────────────────────────────────
+local function StartGame()
+    if S.gameState ~= "menu" then return end
+    U.LogInfo("[Game] 开始游戏")
+    S.gameState = "playing"
+    UI.StartGame()
+    UI.ResetHint()
+end
 
 -- ─────────────────────────────────────────────────────────────
---  重新开始
+--  重新开始（gameover → playing）
 -- ─────────────────────────────────────────────────────────────
 local function RestartGame()
+    if S.gameState ~= "gameover" then return end
     U.LogInfo("[Game] 重新开始")
 
     Obstacles.ClearAll()
@@ -79,9 +87,20 @@ local function RestartGame()
 end
 
 -- ─────────────────────────────────────────────────────────────
---  键盘输入（使用 GetKeyDown 持续检测，支持连续转向）
+--  键盘输入
 -- ─────────────────────────────────────────────────────────────
 local function HandleKeyboard(dt)
+    -- menu 状态：任意键开始
+    if S.gameState == "menu" then
+        if input:GetKeyPress(KEY_RETURN) or input:GetKeyPress(KEY_SPACE)
+        or input:GetKeyDown(KEY_A) or input:GetKeyDown(KEY_D)
+        or input:GetKeyDown(KEY_LEFT) or input:GetKeyDown(KEY_RIGHT)
+        or input:GetKeyDown(KEY_W) or input:GetKeyDown(KEY_UP) then
+            StartGame()
+        end
+        return
+    end
+
     if S.gameState == "gameover" then
         if input:GetKeyPress(KEY_RETURN) or input:GetKeyPress(KEY_SPACE) then
             RestartGame()
@@ -96,7 +115,6 @@ local function HandleKeyboard(dt)
         steering = 1
     end
 
-    -- 触摸转向叠加
     if steering == 0 then
         steering = S.touchSteering
     end
@@ -107,7 +125,6 @@ local function HandleKeyboard(dt)
         Boat.ReturnCenter(dt)
     end
 
-    -- W/S 调节油门（0 ~ 1 区间）
     if input:GetKeyDown(KEY_W) or input:GetKeyDown(KEY_UP) then
         S.throttle = math.min(1.0, S.throttle + C.THROTTLE_STEP * dt)
     end
@@ -117,9 +134,13 @@ local function HandleKeyboard(dt)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  触摸事件（屏幕左半 = 左转，右半 = 右转）
+--  触摸事件
 -- ─────────────────────────────────────────────────────────────
 function HandleTouchBegin(eventType, eventData)
+    if S.gameState == "menu" then
+        StartGame()
+        return
+    end
     if S.gameState == "gameover" then
         RestartGame()
         return
@@ -140,7 +161,9 @@ function HandleTouchEnd(eventType, eventData)
 end
 
 function HandleMousePress(eventType, eventData)
-    if S.gameState == "gameover" then
+    if S.gameState == "menu" then
+        StartGame()
+    elseif S.gameState == "gameover" then
         RestartGame()
     end
 end
@@ -155,22 +178,23 @@ function Start()
 
     SceneMod.Init()
     Track.Init()
-    Vegetation.Init() -- 沿岸草坪与树木（依赖 Track.Init 写入 S.trackPath）
-    Buildings.Init()  -- 沿岸建筑群（依赖 Track.Init 写入 S.trackPath）
-    Water.Init()      -- 动态波浪水面（替代 Track 瓦片水面）
+    Vegetation.Init()
+    Buildings.Init()
+    Water.Init()
     Boat.Init()
-    Particles.Init()  -- 必须在 Boat.Init() 之后（需要 S.boatVisNode）
-    BoatPhys.Init()   -- 必须在 Boat.Init() 之后（需要 S.boatNode）
+    Particles.Init()
+    BoatPhys.Init()
     Camera.Init()
     UI.Init()
     ThrottleUI.Init()
+    Audio.Init(S.mainScene)
 
     SubscribeToEvent("TouchBegin",      "HandleTouchBegin")
     SubscribeToEvent("TouchEnd",        "HandleTouchEnd")
     SubscribeToEvent("MouseButtonDown", "HandleMousePress")
     SubscribeToEvent("Update",          "HandleUpdate")
 
-    U.LogInfo("[Init] 全部模块初始化完成")
+    U.LogInfo("[Init] 全部模块初始化完成，等待玩家开始")
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -181,10 +205,18 @@ function HandleUpdate(eventType, eventData)
     dt = math.min(dt, 0.05)
 
     HandleKeyboard(dt)
+    UI.Update(dt)
+
+    -- menu 状态：只更新相机和水面动画，船不移动
+    if S.gameState == "menu" then
+        Water.Update(dt)
+        Camera.Update(dt)
+        return
+    end
 
     if S.gameState ~= "playing" then return end
 
-    -- 油门驱动速度：目标速度由油门开度决定，平滑插值逼近
+    -- 油门驱动速度
     local targetSpeed = C.SPEED_MIN + S.throttle * (C.SPEED_MAX - C.SPEED_MIN)
     if S.speed < targetSpeed then
         S.speed = math.min(targetSpeed, S.speed + C.THROTTLE_ACCEL * dt)
@@ -195,7 +227,7 @@ function HandleUpdate(eventType, eventData)
     S.distanceMeter = S.distanceMeter + S.speed * dt
     S.score = math.floor(S.distanceMeter) + S.coinCount * 10
 
-    -- 低油门时缓慢回复耐久（鼓励减速驾驶）
+    -- 低油门缓慢回复耐久
     if S.throttle < C.DUR_REGEN_THR and S.durability < 1.0 then
         S.durability = math.min(1.0, S.durability + C.DUR_REGEN * dt)
     end
@@ -207,6 +239,5 @@ function HandleUpdate(eventType, eventData)
     Water.Update(dt)
     Obstacles.Update(dt)
     Coins.Update(dt)
-    UI.Update(dt)
     ThrottleUI.Update()
 end

@@ -28,7 +28,7 @@ local S = {
     trackEndHeading  = 0.0,     -- 当前赛道末端朝向
 
     -- ── 游戏进程 ──────────────────────────────────────────
-    gameState     = "playing",  -- "playing" | "gameover"
+    gameState     = "menu",     -- "menu" | "playing" | "gameover"
     speed         = C.SPEED_INIT,
     throttle      = 0.25,       -- 油门开度（0 ~ 1）
     score         = 0,
