@@ -72,8 +72,8 @@ local function CreateStartScreen(root)
     startRoot:SetColor(Color(0.03, 0.08, 0.22, 0.82))
 
     local titleY = math.floor(sh * 0.16)
-    Txt(startRoot, "海 河 飙 车",     52, 0.15, 0.82, 1.0, 1.0, HA_CENTER, VA_TOP, 0, titleY)
-    Txt(startRoot, "Haihe Rush",       24, 0.55, 0.85, 1.0, 0.8, HA_CENTER, VA_TOP, 0, titleY + 62)
+    Txt(startRoot, "海 河 竞 速",     52, 0.15, 0.82, 1.0, 1.0, HA_CENTER, VA_TOP, 0, titleY)
+    Txt(startRoot, "Haihe Racing",     24, 0.55, 0.85, 1.0, 0.8, HA_CENTER, VA_TOP, 0, titleY + 62)
     Txt(startRoot, "天津海河 · 极速赛艇体验",
                                        19, 0.80, 0.92, 1.0, 0.7, HA_CENTER, VA_TOP, 0, titleY + 94)
 
@@ -83,7 +83,7 @@ local function CreateStartScreen(root)
     Txt(startRoot, "D / 右方向键    向右转", 17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 56)
     Txt(startRoot, "W / 上方向键    加速",   17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 80)
     Txt(startRoot, "S / 下方向键    刹车",   17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 104)
-    Txt(startRoot, "手机：点左半屏左转，点右半屏右转",
+    Txt(startRoot, "手机：屏幕四角虚拟按键控制方向/油门",
                                              16, 0.75, 0.88, 1.0, 0.7, HA_CENTER, VA_TOP, 0, tipY + 132)
 
     S.startPrompt = Txt(startRoot, ">>  点击任意处开始游戏  <<",

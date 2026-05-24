@@ -3,23 +3,24 @@
 --  入口文件：模块加载、事件注册、主循环编排
 -- ============================================================
 
-local C          = require "config"
-local S          = require "state"
-local U          = require "utils"
-local SceneMod   = require "scene"
-local Track      = require "track"
-local Boat       = require "boat"
-local BoatPhys   = require "boatphys"
-local Obstacles  = require "obstacles"   -- 内部会 require gameboat
-local Coins      = require "coins"
-local Camera     = require "camera"
-local UI         = require "ui"
-local ThrottleUI = require "throttleui"
-local Water      = require "water"
-local Particles  = require "particles"
-local Vegetation = require "vegetation"
-local Buildings  = require "buildings"
-local Audio      = require "audio"
+local C             = require "config"
+local S             = require "state"
+local U             = require "utils"
+local SceneMod      = require "scene"
+local Track         = require "track"
+local Boat          = require "boat"
+local BoatPhys      = require "boatphys"
+local Obstacles     = require "obstacles"   -- 内部会 require gameboat
+local Coins         = require "coins"
+local Camera        = require "camera"
+local UI            = require "ui"
+local ThrottleUI    = require "throttleui"
+local Water         = require "water"
+local Particles     = require "particles"
+local Vegetation    = require "vegetation"
+local Buildings     = require "buildings"
+local Audio         = require "audio"
+local TouchControls = require "touchcontrols"
 
 -- ─────────────────────────────────────────────────────────────
 --  耐久度扣减（全局，供 boatphys.lua 调用）
@@ -56,6 +57,7 @@ local function StartGame()
     S.gameState = "playing"
     UI.StartGame()
     UI.ResetHint()
+    TouchControls.SetVisible(true)
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -75,6 +77,7 @@ local function RestartGame()
     Particles.Reset()
     UI.HideGameOver()
     UI.ResetHint()
+    TouchControls.SetVisible(true)
 
     S.speed         = C.SPEED_INIT
     S.throttle      = 0.25
@@ -115,8 +118,10 @@ local function HandleKeyboard(dt)
         steering = 1
     end
 
+    -- 合并触屏转向（虚拟按键优先于旧半屏逻辑）
     if steering == 0 then
-        steering = S.touchSteering
+        local tc = TouchControls.GetSteering()
+        steering = (tc ~= 0) and tc or S.touchSteering
     end
 
     if steering ~= 0 then
@@ -125,10 +130,11 @@ local function HandleKeyboard(dt)
         Boat.ReturnCenter(dt)
     end
 
-    if input:GetKeyDown(KEY_W) or input:GetKeyDown(KEY_UP) then
+    -- 油门：键盘 + 虚拟按键
+    if input:GetKeyDown(KEY_W) or input:GetKeyDown(KEY_UP) or TouchControls.IsAccelPressed() then
         S.throttle = math.min(1.0, S.throttle + C.THROTTLE_STEP * dt)
     end
-    if input:GetKeyDown(KEY_S) or input:GetKeyDown(KEY_DOWN) then
+    if input:GetKeyDown(KEY_S) or input:GetKeyDown(KEY_DOWN) or TouchControls.IsBrakePressed() then
         S.throttle = math.max(0.0, S.throttle - C.THROTTLE_STEP * dt)
     end
 end
@@ -145,19 +151,31 @@ function HandleTouchBegin(eventType, eventData)
         RestartGame()
         return
     end
-    if S.touchId ~= -1 then return end
-    S.touchId     = eventData["TouchID"]:GetInt()
-    S.touchStartX = eventData["X"]:GetInt()
-    S.touchStartY = eventData["Y"]:GetInt()
 
+    -- 先让虚拟按键消费此触点
+    TouchControls_OnTouchBegin(eventType, eventData)
+
+    -- 若虚拟按键已处理（GetSteering 非零），不再走旧半屏逻辑
+    if TouchControls.GetSteering() ~= 0 then return end
+
+    -- 旧半屏逻辑（未点中虚拟按键时的兜底）
+    if S.touchId ~= -1 then return end
+    S.touchId       = eventData["TouchID"]:GetInt()
+    S.touchStartX   = eventData["X"]:GetInt()
+    S.touchStartY   = eventData["Y"]:GetInt()
     local screenHalf = graphics:GetWidth() / 2
     S.touchSteering  = eventData["X"]:GetInt() < screenHalf and -1 or 1
 end
 
 function HandleTouchEnd(eventType, eventData)
-    if eventData["TouchID"]:GetInt() ~= S.touchId then return end
-    S.touchId       = -1
-    S.touchSteering = 0
+    -- 转发给虚拟按键
+    TouchControls_OnTouchEnd(eventType, eventData)
+
+    -- 旧半屏逻辑释放
+    if eventData["TouchID"]:GetInt() == S.touchId then
+        S.touchId       = -1
+        S.touchSteering = 0
+    end
 end
 
 function HandleMousePress(eventType, eventData)
@@ -187,10 +205,12 @@ function Start()
     Camera.Init()
     UI.Init()
     ThrottleUI.Init()
+    TouchControls.Init()
     Audio.Init(S.mainScene)
 
     SubscribeToEvent("TouchBegin",      "HandleTouchBegin")
     SubscribeToEvent("TouchEnd",        "HandleTouchEnd")
+    SubscribeToEvent("TouchMove",       "TouchControls_OnTouchMove")
     SubscribeToEvent("MouseButtonDown", "HandleMousePress")
     SubscribeToEvent("Update",          "HandleUpdate")
 
@@ -240,4 +260,5 @@ function HandleUpdate(eventType, eventData)
     Obstacles.Update(dt)
     Coins.Update(dt)
     ThrottleUI.Update()
+    TouchControls.Update()
 end
