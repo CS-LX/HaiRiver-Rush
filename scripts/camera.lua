@@ -7,6 +7,7 @@
 --    · 低速（撞墙后）：追逐慢，防止 180° 翻转
 --    · 高速（正常）：追逐快，视角跟手
 --    · 位置用高速指数平滑吸收物理抖动，不引入额外延迟感
+--    · FOV 随速度动态变化：静止 70° → 最高速 95°，跳跃额外 +8°
 -- ============================================================
 local C = require "config"
 local S = require "state"
@@ -16,6 +17,15 @@ local M = {}
 
 -- 摄像机独立偏航角（度）
 local camYaw = 0.0
+
+-- 当前平滑后的 FOV
+local currentFov = 70.0
+
+-- FOV 参数
+local FOV_BASE    = 70.0   -- 静止/低速基础 FOV
+local FOV_MAX     = 95.0   -- 最高速时 FOV
+local FOV_JUMP    =  8.0   -- 跳跃时额外叠加 FOV
+local FOV_RATE    =  5.0   -- 平滑速率（指数衰减，越大越快响应）
 
 -- 将角度差规范化到 [-180, 180]，保证走最短路径
 local function NormAngle(a)
@@ -47,11 +57,33 @@ local function UpdateCamYaw(dt)
     camYaw = camYaw + step
 end
 
+-- 每帧平滑更新 FOV
+local function UpdateFov(dt)
+    local sf = SpeedFactor()
+
+    -- 目标 FOV：速度线性插值 + 跳跃叠加
+    local targetFov = FOV_BASE + sf * (FOV_MAX - FOV_BASE)
+    if S.isJumping then
+        targetFov = targetFov + FOV_JUMP
+    end
+
+    -- 指数平滑过渡，避免突变
+    local alpha = 1.0 - math.exp(-FOV_RATE * dt)
+    currentFov = currentFov + (targetFov - currentFov) * alpha
+
+    -- 写入相机组件
+    local cam = S.cameraNode:GetComponent("Camera")
+    if cam then
+        cam:SetFov(currentFov)
+    end
+end
+
 function M.Init()
     S.cameraNode = S.mainScene:CreateChild("Camera")
     local cam    = S.cameraNode:CreateComponent("Camera")
     cam:SetFarClip(1200.0)
-    cam:SetFov(70.0)
+    cam:SetFov(FOV_BASE)
+    currentFov = FOV_BASE
     renderer:SetViewport(0, Viewport:new(S.mainScene, cam))
 
     -- SoundListener 必须挂在相机节点上，引擎才会激活音频输出
@@ -74,6 +106,7 @@ end
 
 function M.Update(dt)
     UpdateCamYaw(dt)
+    UpdateFov(dt)
 
     local bp  = S.boatNode:GetWorldPosition()
     local rad = math.rad(camYaw)  -- ← 唯一来源
@@ -102,6 +135,7 @@ end
 -- 重开时对齐，避免补偿动画
 function M.Reset()
     camYaw = S.boatHeading
+    currentFov = FOV_BASE
     -- 同时重置相机物理位置，防止残留旧位置
     local bp  = S.boatNode:GetWorldPosition()
     local rad = math.rad(camYaw)
@@ -111,6 +145,8 @@ function M.Reset()
             bp.y + C.CAM_UP,
             bp.z - math.cos(rad) * C.CAM_BACK
         ))
+        local cam = S.cameraNode:GetComponent("Camera")
+        if cam then cam:SetFov(FOV_BASE) end
     end
 end
 
