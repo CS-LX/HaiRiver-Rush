@@ -225,6 +225,7 @@ local function AddWindowsToFacade(root, def, height)
                     local sm1 = fn:CreateComponent("StaticModel")
                     sm1:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
                     sm1:SetMaterial(winFrameMat)
+                    sm1:SetCastShadows(true)
 
                     -- 玻璃（深色薄板）
                     local gn = root:CreateChild("WG")
@@ -235,6 +236,7 @@ local function AddWindowsToFacade(root, def, height)
                     local sm2 = gn:CreateComponent("StaticModel")
                     sm2:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
                     sm2:SetMaterial(winGlassMat)
+                    sm2:SetCastShadows(true)
                 end
             end
             ::continue_group::
@@ -343,6 +345,7 @@ local function AddCurtainWallToFacade(root, def, height, wx, wz)
             local smg = gn:CreateComponent("StaticModel")
             smg:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
             smg:SetMaterial(glassMat)
+            smg:SetCastShadows(true)
 
             -- ② 横向楼板带（每层一道，凸出玻璃面）
             local nFloors = math.max(1, math.floor(totalH / CW_FLOOR_H))
@@ -358,6 +361,7 @@ local function AddCurtainWallToFacade(root, def, height, wx, wz)
                 local smb = bn:CreateComponent("StaticModel")
                 smb:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
                 smb:SetMaterial(cwConcrMat)
+                smb:SetCastShadows(true)
             end
 
             -- ③ 竖向竖挺（等间距，凸出玻璃面）
@@ -375,6 +379,7 @@ local function AddCurtainWallToFacade(root, def, height, wx, wz)
                     local smm = mn:CreateComponent("StaticModel")
                     smm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
                     smm:SetMaterial(cwConcrMat)
+                    smm:SetCastShadows(true)
                 end
             end
 
@@ -417,6 +422,7 @@ local function SpawnBuilding(def, height, wx, wz, rotY)
             local sm = pn:CreateComponent("StaticModel")
             sm:SetModel(cache:GetResource("Model", "Models/Sphere.mdl"))
             sm:SetMaterial(mat)
+            sm:SetCastShadows(true)
 
         elseif model == "Cylinder" then
             -- Cylinder.mdl：直径1、高度1
@@ -425,6 +431,7 @@ local function SpawnBuilding(def, height, wx, wz, rotY)
             local sm = pn:CreateComponent("StaticModel")
             sm:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
             sm:SetMaterial(mat)
+            sm:SetCastShadows(true)
 
         else  -- Box（默认）
             local partW = def.spanX * (part.xScale or 1.0)
@@ -433,6 +440,7 @@ local function SpawnBuilding(def, height, wx, wz, rotY)
             local sm = pn:CreateComponent("StaticModel")
             sm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
             sm:SetMaterial(mat)
+            sm:SetCastShadows(true)
         end
     end
 

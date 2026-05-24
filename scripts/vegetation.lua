@@ -164,6 +164,7 @@ local function SpawnFlowerCluster(wx, wz, flowerMat)
         local stemSm = stemNode:CreateComponent("StaticModel")
         stemSm:SetModel(cache:GetResource("Model", "Models/Cone.mdl"))
         stemSm:SetMaterial(M._stemMat)
+        stemSm:SetCastShadows(true)
 
         -- 花冠（Sphere，扁球形）
         local headNode = S.mainScene:CreateChild("FlowerHead")
@@ -172,6 +173,7 @@ local function SpawnFlowerCluster(wx, wz, flowerMat)
         local headSm = headNode:CreateComponent("StaticModel")
         headSm:SetModel(cache:GetResource("Model", "Models/Sphere.mdl"))
         headSm:SetMaterial(flowerMat)
+        headSm:SetCastShadows(true)
     end
 end
 
@@ -188,6 +190,7 @@ local function SpawnPlant(def, wx, wz, scale, rotY)
     for idx, matUuid in ipairs(def.mats) do
         sm:SetMaterial(idx - 1, cache:GetResource("Material", matUuid))
     end
+    sm:SetCastShadows(true)
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -209,6 +212,7 @@ local function SpawnForSide(tileIdx, xSign, n)
     local gsm = grassNode:CreateComponent("StaticModel")
     gsm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
     gsm:SetMaterial(GetGrassMat())
+    gsm:SetCastShadows(true)
 
     -- ── 灌木：草坪带内，每瓦片每侧 1 株 ──────────────────────
     for k = 1, BUSH_PER_TILE do

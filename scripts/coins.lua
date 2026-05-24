@@ -46,6 +46,7 @@ local function BuildCoin()
     local mdl = node:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
     mdl:SetMaterial(BuildCoinMat())
+    mdl:SetCastShadows(true)
     -- 金币：直径 1.4m，厚度 0.22m
     node:SetScale(Vector3(1.4, 0.22, 1.4))
 

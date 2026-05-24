@@ -44,6 +44,7 @@ local function AddBox(parent, name, mat, sx, sy, sz, px, py, pz, rx, ry, rz)
     local mdl = n:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
     mdl:SetMaterial(mat)
+    mdl:SetCastShadows(true)
     n:SetScale(Vector3(sx, sy, sz))
     n:SetPosition(Vector3(px or 0, py or 0, pz or 0))
     if rx or ry or rz then
@@ -57,6 +58,7 @@ local function AddCylinder(parent, name, mat, sx, sy, sz, px, py, pz, rx, ry, rz
     local mdl = n:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
     mdl:SetMaterial(mat)
+    mdl:SetCastShadows(true)
     n:SetScale(Vector3(sx, sy, sz))
     n:SetPosition(Vector3(px or 0, py or 0, pz or 0))
     if rx or ry or rz then
@@ -70,6 +72,7 @@ local function AddSphere(parent, name, mat, s, px, py, pz)
     local mdl = n:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Sphere.mdl"))
     mdl:SetMaterial(mat)
+    mdl:SetCastShadows(true)
     n:SetScale(Vector3(s, s, s))
     n:SetPosition(Vector3(px or 0, py or 0, pz or 0))
     return n
@@ -122,6 +125,7 @@ function M.Init()
         local mdl = bowNode:CreateComponent("StaticModel")
         mdl:SetModel(cache:GetResource("Model", "Models/Pyramid.mdl"))
         mdl:SetMaterial(matHull)
+        mdl:SetCastShadows(true)
     end
     bowNode:SetScale(Vector3(1.55, 1.05, 0.42))
     bowNode:SetPosition(Vector3(0, 0.04, 2.12))
@@ -145,6 +149,7 @@ function M.Init()
         local mdl = windshield:CreateComponent("StaticModel")
         mdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
         mdl:SetMaterial(matGlass)
+        mdl:SetCastShadows(true)
     end
     windshield:SetScale(Vector3(1.45, 0.45, 0.06))
     windshield:SetPosition(Vector3(0, 0.72, 0.70))
@@ -186,6 +191,7 @@ function M.Init()
         local mdl   = blade:CreateComponent("StaticModel")
         mdl:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
         mdl:SetMaterial(matProp)
+        mdl:SetCastShadows(true)
         blade:SetScale(Vector3(0.10, 0.35, 0.18))   -- 薄、长、稍宽
         blade:SetPosition(Vector3(0, 0.22, 0))       -- 从轴心向外延伸
         blade:SetRotation(Quaternion(0, 15, 0))      -- 桨叶攻角

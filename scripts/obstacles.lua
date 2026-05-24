@@ -75,6 +75,7 @@ local function BuildBuoy(side)
     local mdl = node:CreateComponent("StaticModel")
     mdl:SetModel(cache:GetResource("Model", "Models/Cylinder.mdl"))
     mdl:SetMaterial(GetBuoyMat(side))
+    mdl:SetCastShadows(true)
     -- 浮标缩小：直径 0.9m，高 1.2m
     node:SetScale(Vector3(0.9, 1.2, 0.9))
 

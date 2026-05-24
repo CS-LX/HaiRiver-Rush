@@ -17,12 +17,23 @@ function M.Init()
     local lgNode = S.mainScene:CreateChild("LightGroup")
     lgNode:LoadXML(lgFile:GetRoot())
 
-    -- ── 2. 微调方向光（增强一点阳光亮度）──────────────────────────────
+    -- ── 2. 微调方向光（增强阳光亮度 + 开启级联阴影）──────────────────
     local sun = lgNode:GetComponent("Light", true)
     if sun then
         sun:SetBrightness(3.5)
         sun:SetCastShadows(true)
+        -- 阴影偏移：防止自遮挡（shadow acne）
+        sun.shadowBias = BiasParameters(0.00025, 0.5)
+        -- 级联阴影：4 级，覆盖 15 / 60 / 150 / 400 m，最后参数为淡出比例
+        sun.shadowCascade = CascadeParameters(15.0, 60.0, 150.0, 400.0, 0.8)
+        -- 阴影消退距离（超过此距离阴影渐隐）
+        sun.shadowFadeDistance = 350.0
     end
+
+    -- ── 2b. 渲染器：全局阴影质量设置 ──────────────────────────────────
+    renderer:SetDrawShadows(true)
+    renderer:SetShadowMapSize(2048)          -- 阴影贴图分辨率（越大越清晰）
+    renderer:SetShadowQuality(SHADOWQUALITY_PCF_16BIT)  -- PCF 软阴影
 
     -- ── 3. 从 LightGroup 获取 Zone，把雾推远──────────────────────────
     --   河道赛车需要较远视距，fogStart/fogEnd 拉到数百米
