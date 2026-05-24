@@ -5,20 +5,46 @@
     "id": "771520039"
   },
   "entry": "main.lua",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "taptap_publish": {
-    "title": "<game title, required>",
-    "description": "<game description>",
-    "category": "<game category: rpg, casual, action, strategy, simulation, trivia, arcade, adventure, card, sports, racing, puzzle, educational, music, word, board>",
+    "title": "海河冲刺",
+    "description": "天津海河——急速赛艇体验\n\n来到了天津卫，嘛也没学会\n学会了开赛艇，创死了二百多",
+    "category": "racing",
     "screen_orientation": "landscape",
     "collection_type": "sce",
-    "trial_note": "<developer's note>",
+    "trial_note": "冲刺冲刺冲刺！！\n此为2026 TPGameJam参赛作品",
+    "gameplay_demo_video_source": "https://tapcode-sce.spark.xd.com/videos/p_9as1/1779597654621-rec_47237d9f-8537-4b34-9cb3-c09fceb76531.mp4",
     "app_platforms": "1,2",
-    "developer_id": 339586
+    "developer_id": 339586,
+    "app_id": 861755,
+    "miniapp_id": "tapmcgvvhhyrdngugl"
   },
   "assets": {
-    "icon": "",
-    "screenshots": [],
-    "promotional_image": ""
+    "icon": "./game_material/ICON_2026-05-24T04-21-14_01.png",
+    "screenshots": [
+      "./game_material/SCREENSHOT_2026-05-24T04-21-14_01.png",
+      "./game_material/SCREENSHOT_2026-05-24T04-21-14_02.png",
+      "./game_material/SCREENSHOT_2026-05-24T04-21-14_03.png"
+    ],
+    "promotional_image": "./game_material/PROMO_2026-05-24T04-21-14_01.jpg",
+    "icon_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/ICON_2026-05-24T04-21-14_01.png",
+    "screenshot_urls": [
+      "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/SCREENSHOT_2026-05-24T04-21-14_01.png",
+      "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/SCREENSHOT_2026-05-24T04-21-14_02.png",
+      "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/SCREENSHOT_2026-05-24T04-21-14_03.png"
+    ],
+    "promotional_image_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/PROMO_2026-05-24T04-21-14_01.jpg",
+    "cover_horizontal": "./game_material/COVER_HORIZONTAL_2026-05-24T04-23-39_01.png",
+    "cover_horizontal_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/COVER_HORIZONTAL_2026-05-24T04-23-39_01.png",
+    "cover_vertical": "./game_material/COVER_VERTICAL_2026-05-24T04-26-32_01.png",
+    "cover_vertical_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/COVER_VERTICAL_2026-05-24T04-26-32_01.png"
+  },
+  "metadata": {
+    "updated_at": "2026-05-24T05:04:25.225Z",
+    "promo_dependent_hash": "d1d64b47912031e71df83d0de04a099e"
+  },
+  "test_qrcode": {
+    "url": "https://tapcode-sce.spark.xd.com/qrcode/p_9as1_1779599065052.png",
+    "generated_at": "2026-05-24T05:04:25.225Z"
   }
 }
