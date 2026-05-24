@@ -21,6 +21,17 @@ local U = require "utils"
 local M = {}
 
 -- ─────────────────────────────────────────────────────────────
+--  流式加载参数
+--  只保留玩家前方 STREAM_AHEAD 个瓦片、后方 STREAM_BEHIND 个瓦片的建筑
+--  360 个瓦片中始终只有 ~70 个处于活跃状态（↓ ~81% 节点数）
+-- ─────────────────────────────────────────────────────────────
+local STREAM_AHEAD  = 55   -- 前方可见瓦片数（~550m）
+local STREAM_BEHIND = 15   -- 后方保留瓦片数（~150m）
+
+local tileRoots  = {}  -- [tileIdx] = { root, root, ... }  已生成建筑根节点
+local frameCount = 0   -- 用于定期清理
+
+-- ─────────────────────────────────────────────────────────────
 --  距离常量
 -- ─────────────────────────────────────────────────────────────
 local GRASS_X1    = C.TRACK_WIDTH * 0.5 + C.WALL_W * 5 + 13.0  -- 34m
@@ -450,6 +461,8 @@ local function SpawnBuilding(def, height, wx, wz, rotY)
     else
         AddWindowsToFacade(root, def, height)
     end
+
+    return root
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -488,35 +501,33 @@ local function LoadConfig()
 end
 
 -- ─────────────────────────────────────────────────────────────
---  每侧建筑生成
+--  每侧建筑生成（返回本次生成的所有根节点）
 -- ─────────────────────────────────────────────────────────────
 local function SpawnForSide(tileIdx, xSign, n)
     local heading = n.heading
     local midX    = n.midX
     local midZ    = n.midZ
+    local roots   = {}   -- 收集本侧所有建筑根节点
 
     local shortDef  = config.types["european_house"]
-    local tallDef   = config.types["glass_tower"]   -- 用作间隔基准
+    local tallDef   = config.types["glass_tower"]
     local palaceDef = config.types["baroque_palace"]
     local portalDef = config.types["portal_tower"]
     local ctfDef    = config.types["ctf_tower"]
 
-    -- ── 普通高楼随机池（不含地标）────────────────────────────────
-    -- 按权重排列：同一类型出现多次 = 更高概率
     local tallPool = {}
     for _, k in ipairs({
-        "glass_tower",    "glass_tower",      -- 米黄古典  × 2
-        "ivory_classic",  "ivory_classic",    -- 象牙白    × 2
-        "concrete_office","concrete_office",  -- 混凝土灰  × 2
-        "teal_glass",                         -- 青绿幕墙  × 1
-        "dark_step",                          -- 暖碳灰退台× 1
+        "glass_tower",    "glass_tower",
+        "ivory_classic",  "ivory_classic",
+        "concrete_office","concrete_office",
+        "teal_glass",
+        "dark_step",
     }) do
         local d = config.types[k]
         if d then tallPool[#tallPool + 1] = d end
     end
     local poolSize = #tallPool
 
-    -- 用当前 LCG 随机值从池中抽取一种高层
     local function PickTall()
         local idx = math.floor(LcgRand() * poolSize) + 1
         return tallPool[math.max(1, math.min(poolSize, idx))]
@@ -533,16 +544,15 @@ local function SpawnForSide(tileIdx, xSign, n)
         local wx1, wz1 = LocalToWorld(midX, midZ, heading, lx1, lz1)
 
         if palaceDef and tileIdx % palaceInterval == 0 then
-            SpawnBuilding(palaceDef, palaceDef.heightMin, wx1, wz1,
+            roots[#roots+1] = SpawnBuilding(palaceDef, palaceDef.heightMin, wx1, wz1,
                 heading + RandRange(-3, 3))
         else
             local h1 = RandRange(shortDef.heightMin, shortDef.heightMax)
-            SpawnBuilding(shortDef, h1, wx1, wz1, heading + RandRange(-6, 6))
+            roots[#roots+1] = SpawnBuilding(shortDef, h1, wx1, wz1, heading + RandRange(-6, 6))
         end
     end
 
     -- ── 高楼第一行 ─────────────────────────────────────────────
-    -- portal_tower 作为门形地标，每 3×自身间隔出现一次（约每 240m）
     local tallInterval   = tallDef   and tallDef._interval         or 3
     local portalInterval = portalDef and (portalDef._interval * 3) or 24
     if tileIdx % tallInterval == 0 then
@@ -553,17 +563,16 @@ local function SpawnForSide(tileIdx, xSign, n)
         local wx2, wz2 = LocalToWorld(midX, midZ, heading, lx2, lz2)
 
         if portalDef and tileIdx % portalInterval == 0 then
-            SpawnBuilding(portalDef, portalDef.heightMin, wx2, wz2,
+            roots[#roots+1] = SpawnBuilding(portalDef, portalDef.heightMin, wx2, wz2,
                 heading + RandRange(-2, 2))
         else
             local picked2 = PickTall()
             local h2 = RandRange(picked2.heightMin, picked2.heightMax)
-            SpawnBuilding(picked2, h2, wx2, wz2, heading + RandRange(-4, 4))
+            roots[#roots+1] = SpawnBuilding(picked2, h2, wx2, wz2, heading + RandRange(-4, 4))
         end
     end
 
-    -- ── 高楼第二行（错开半个间隔，避免与第一行对齐）──────────────
-    -- ctf_tower 作为超高层地标，每 5×自身间隔出现一次（约每 200m）
+    -- ── 高楼第二行 ─────────────────────────────────────────────
     local tallOffset  = math.floor(tallInterval * 0.5)
     local ctfInterval = ctfDef and (ctfDef._interval * 5) or 20
     if (tileIdx + tallOffset) % tallInterval == 0 then
@@ -575,14 +584,46 @@ local function SpawnForSide(tileIdx, xSign, n)
 
         if ctfDef and tileIdx % ctfInterval == 0 then
             local h3 = RandRange(ctfDef.heightMin, ctfDef.heightMax)
-            SpawnBuilding(ctfDef, h3, wx3, wz3, heading + RandRange(-2, 2))
+            roots[#roots+1] = SpawnBuilding(ctfDef, h3, wx3, wz3, heading + RandRange(-2, 2))
         else
             local picked3 = PickTall()
-            -- 第二行整体再加高一档，拉出天际线层次感
             local h3 = RandRange(picked3.heightMin + 12, picked3.heightMax + 22)
-            SpawnBuilding(picked3, h3, wx3, wz3, heading + RandRange(-4, 4))
+            roots[#roots+1] = SpawnBuilding(picked3, h3, wx3, wz3, heading + RandRange(-4, 4))
         end
     end
+
+    return roots
+end
+
+-- ─────────────────────────────────────────────────────────────
+--  单瓦片建筑生成 / 移除
+-- ─────────────────────────────────────────────────────────────
+local function SpawnTile(i)
+    if tileRoots[i] then return end
+    local path = S.trackPath
+    if not path or not path[i] then return end
+    local n = path[i]
+    if not n.midX then return end
+
+    local roots = {}
+    for _, r in ipairs(SpawnForSide(i, -1, n)) do roots[#roots+1] = r end
+    for _, r in ipairs(SpawnForSide(i,  1, n)) do roots[#roots+1] = r end
+    tileRoots[i] = roots
+end
+
+local function RemoveTile(i)
+    local roots = tileRoots[i]
+    if not roots then return end
+    for _, r in ipairs(roots) do
+        r:Remove()
+    end
+    tileRoots[i] = nil
+end
+
+-- 判断瓦片 i 是否在 [curIdx-BEHIND, curIdx+AHEAD] 范围内
+local function InRange(i, curIdx, loopN)
+    local fwd = (i - curIdx + loopN) % loopN
+    return fwd <= STREAM_AHEAD or fwd >= loopN - STREAM_BEHIND
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -593,21 +634,39 @@ function M.Init()
         U.LogInfo("[Buildings] 配置加载失败，跳过建筑生成")
         return
     end
-    local path = S.trackPath
-    if not path or #path == 0 then
-        U.LogInfo("[Buildings] trackPath 为空，跳过建筑生成")
-        return
-    end
-    local count = 0
-    for i = 1, #path do
-        local n = path[i]
-        if n.midX and n.midZ then
-            SpawnForSide(i, -1, n)
-            SpawnForSide(i,  1, n)
-            count = count + 1
+    U.LogInfo("[Buildings] 配置加载完毕，等待流式加载（Update 驱动）")
+end
+
+-- 每帧调用，curIdx / loopN 由 Track 提供
+function M.Update(curIdx, loopN)
+    if loopN == 0 or not config then return end
+
+    -- 生成进入范围的瓦片
+    for offset = -STREAM_BEHIND, STREAM_AHEAD do
+        local i = (curIdx - 1 + offset + loopN) % loopN + 1
+        if not tileRoots[i] then
+            SpawnTile(i)
         end
     end
-    U.LogInfo(string.format("[Buildings] 完成：%d 个瓦片建筑已生成", count))
+
+    -- 每 90 帧清理一次超出范围的瓦片（~1.5s @60fps）
+    frameCount = frameCount + 1
+    if frameCount % 90 == 0 then
+        for i in pairs(tileRoots) do
+            if not InRange(i, curIdx, loopN) then
+                RemoveTile(i)
+            end
+        end
+    end
+end
+
+-- 重置时清空所有已生成建筑（重开一局位置归零）
+function M.Reset()
+    for i in pairs(tileRoots) do
+        RemoveTile(i)
+    end
+    tileRoots  = {}
+    frameCount = 0
 end
 
 return M
