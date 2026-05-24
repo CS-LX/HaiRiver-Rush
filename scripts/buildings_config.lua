@@ -223,5 +223,169 @@ return {
             },
         },
 
+        -- ────────────────────────────────────────────────────
+        --  门形高层（海河地标，参考天津滨海金融区风格）
+        --
+        --  结构解构：
+        --    spanZ=56m  沿赛道宽度（玩家从河岸侧看到的立面宽度）
+        --    spanX=40m  垂直赛道深度
+        --    height=52m 固定高度（约 13 层）
+        --
+        --  门洞几何：
+        --    左柱  zScale=0.32 → 宽17.9m，中心 offsetZ=-19m → Z:-28~-10
+        --    右柱  zScale=0.32 → 宽17.9m，中心 offsetZ=+19m → Z:+10~+28
+        --    虚空  Z:-10 ~ +10 = 20m，Y: 28%~70% 高度
+        --    顶梁  全宽，上部 30% 高度
+        --
+        --  窗格分区（winZGroups）：
+        --    左柱面  Z:-26.5 ~ -11.5（含 1.5m 边距）
+        --    右柱面  Z:+11.5 ~ +26.5
+        --    虚空及顶梁中段无窗（避免悬空窗格）
+        --
+        --  材质：
+        -- ────────────────────────────────────────────────────
+        --  全玻璃幕墙超高层（天津周大福金融中心风格）
+        --
+        --  特征：深蓝反射玻璃全立面 + 三道机械层横带 + 顶部收分
+        --  tier=tall，spanZ=22m，高度 90-115m
+        --  幕墙分区：无 winZGroups（全宽单区），竖挺间距 2.4m
+        -- ────────────────────────────────────────────────────
+        ctf_tower = {
+            tier       = "tall",
+            spanZ      = 22,
+            spanX      = 20,
+            heightMin  = 90,
+            heightMax  = 115,
+            curtainWall = true,
+            winYStart   = 0.01,
+            winYEnd     = 0.98,
+            parts = {
+                -- ── 主体下段（0–40%，全幅）────────────────────
+                { model = "Box",
+                  yBottom = 0.00, yTop = 0.40,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.28, 0.34, 0.48 }, roughness = 0.20, metallic = 0.28,
+                },
+                -- ── 机械层带 1（约 25% 处，全幅略挑出）──────────
+                { model = "Box",
+                  yBottom = 0.23, yTop = 0.27,
+                  xScale = 1.02, zScale = 1.02,
+                  color = { 0.16, 0.18, 0.24 }, roughness = 0.78, metallic = 0.08,
+                },
+                -- ── 主体中段（38–65%，略收缩）────────────────────
+                { model = "Box",
+                  yBottom = 0.38, yTop = 0.65,
+                  xScale = 0.94, zScale = 0.94,
+                  color = { 0.28, 0.34, 0.48 }, roughness = 0.20, metallic = 0.28,
+                },
+                -- ── 机械层带 2（约 50% 处）───────────────────────
+                { model = "Box",
+                  yBottom = 0.48, yTop = 0.52,
+                  xScale = 0.96, zScale = 0.96,
+                  color = { 0.16, 0.18, 0.24 }, roughness = 0.78, metallic = 0.08,
+                },
+                -- ── 主体上段（63–85%，进一步收缩）───────────────
+                { model = "Box",
+                  yBottom = 0.63, yTop = 0.85,
+                  xScale = 0.82, zScale = 0.82,
+                  color = { 0.28, 0.34, 0.48 }, roughness = 0.20, metallic = 0.28,
+                },
+                -- ── 机械层带 3（约 67% 处）───────────────────────
+                { model = "Box",
+                  yBottom = 0.65, yTop = 0.68,
+                  xScale = 0.84, zScale = 0.84,
+                  color = { 0.16, 0.18, 0.24 }, roughness = 0.78, metallic = 0.08,
+                },
+                -- ── 顶部细杆段（83–97%）──────────────────────────
+                { model = "Box",
+                  yBottom = 0.83, yTop = 0.97,
+                  xScale = 0.62, zScale = 0.62,
+                  color = { 0.28, 0.34, 0.48 }, roughness = 0.20, metallic = 0.28,
+                },
+                -- ── 顶冠（尖顶天线底座）─────────────────────────
+                { model = "Box",
+                  yBottom = 0.96, yTop = 1.00,
+                  xScale = 0.28, zScale = 0.28,
+                  color = { 0.22, 0.26, 0.36 }, roughness = 0.40, metallic = 0.50,
+                },
+            },
+        },
+
+        --    石材  暖米黄 (0.79, 0.73, 0.60)  roughness=0.72
+        --    玻璃入口亭  深蓝灰 (0.28, 0.38, 0.50)  metallic=0.65
+        -- ────────────────────────────────────────────────────
+        portal_tower = {
+            tier       = "tall",
+            spanZ      = 56,
+            spanX      = 40,
+            heightMin  = 52,
+            heightMax  = 52,
+            curtainWall = true,  -- 使用幕墙系统（整面玻璃板 + 楼板带 + 竖挺）
+            winYStart  = 0.28,   -- 从基座顶（yTop=0.28）开始
+            winYEnd    = 0.70,   -- 到顶桥底（yBottom=0.70）结束
+            -- 幕墙分区：双柱 + 顶横梁（每组可独立指定 Y 范围）
+            winZGroups = {
+                -- 左柱：从基座顶到顶桥底
+                { zMin = -26.5, zMax = -11.5, yFracStart = 0.28, yFracEnd = 0.70 },
+                -- 右柱：从基座顶到顶桥底
+                { zMin =  11.5, zMax =  26.5, yFracStart = 0.28, yFracEnd = 0.70 },
+                -- 顶横梁（全宽）：顶桥底到顶冠底
+                { zMin = -26.5, zMax =  26.5, yFracStart = 0.70, yFracEnd = 0.97 },
+            },
+            parts = {
+
+                -- ── 基座（全宽，深米黄，下部约 3 层）────────────
+                { model = "Box",
+                  yBottom = 0.00, yTop = 0.28,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.68, 0.62, 0.50 }, roughness = 0.82, metallic = 0.0,
+                },
+
+                -- ── 基座顶线脚（全宽，略宽挑出）────────────────
+                { model = "Box",
+                  yBottom = 0.26, yTop = 0.30,
+                  xScale = 1.02, zScale = 1.02,
+                  color = { 0.58, 0.53, 0.42 }, roughness = 0.85, metallic = 0.0,
+                },
+
+                -- ── 左柱（砂黄石材主体）────────────────────────
+                { model = "Box",
+                  yBottom = 0.28, yTop = 1.00,
+                  xScale = 1.00, zScale = 0.32,
+                  offsetZ = -19.0,
+                  color = { 0.79, 0.73, 0.60 }, roughness = 0.72, metallic = 0.0,
+                },
+
+                -- ── 右柱（镜像左柱）────────────────────────────
+                { model = "Box",
+                  yBottom = 0.28, yTop = 1.00,
+                  xScale = 1.00, zScale = 0.32,
+                  offsetZ = 19.0,
+                  color = { 0.79, 0.73, 0.60 }, roughness = 0.72, metallic = 0.0,
+                },
+
+                -- ── 顶部横梁（全宽，连接双柱）──────────────────
+                { model = "Box",
+                  yBottom = 0.70, yTop = 1.00,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.79, 0.73, 0.60 }, roughness = 0.72, metallic = 0.0,
+                },
+
+                -- ── 顶冠线脚（全宽，微凸出）─────────────────────
+                { model = "Box",
+                  yBottom = 0.97, yTop = 1.00,
+                  xScale = 1.015, zScale = 1.015,
+                  color = { 0.58, 0.53, 0.42 }, roughness = 0.82, metallic = 0.0,
+                },
+
+                -- ── 玻璃入口大厅（中央底部，覆盖虚空宽度）────────
+                { model = "Box",
+                  yBottom = 0.01, yTop = 0.14,
+                  xScale = 0.26, zScale = 0.34,
+                  color = { 0.28, 0.38, 0.50 }, roughness = 0.10, metallic = 0.65,
+                },
+            },
+        },
+
     },
 }

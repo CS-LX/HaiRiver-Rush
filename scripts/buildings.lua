@@ -161,6 +161,13 @@ local function EnsureWinMats()
 end
 
 --- 在建筑两侧立面（±X 面）上生成窗户网格
+---
+--- 支持两种模式：
+---   1. 默认（def.winZGroups 为 nil）：在整个 spanZ 宽度均匀布窗
+---   2. 分区（def.winZGroups 为数组）：仅在指定 Z 范围内布窗
+---      用于有镂空/门洞的建筑，跳过虚空区域
+---      每个分组格式：{ zMin=<m>, zMax=<m> }（相对于建筑局部中心）
+---
 ---@param root Node     建筑根节点
 ---@param def  table    建筑类型定义
 ---@param height number 实际建筑高度（m）
@@ -169,64 +176,185 @@ local function AddWindowsToFacade(root, def, height)
     EnsureWinMats()
 
     local spanX      = def.spanX
-    local spanZ      = def.spanZ
-    local yFracStart = def.winYStart or 0.13   -- 首行窗户起始高度比例
-    local yFracEnd   = def.winYEnd   or 0.76   -- 末行窗户终止高度比例
+    local yFracStart = def.winYStart or 0.13
+    local yFracEnd   = def.winYEnd   or 0.76
 
-    -- 行范围（窗户中心 Y 坐标）
     local yStart = height * yFracStart + WIN_H * 0.5
     local yEnd   = height * yFracEnd   - WIN_H * 0.5
     if yEnd < yStart then return end
 
-    -- 列数：在 spanZ 去掉两端边距后均匀分布
-    local margin = 0.9
-    local availZ = spanZ - margin * 2
-    if availZ <= 0 then return end
-    local nCols = math.max(1, math.floor(availZ / WIN_STEP_Z))
-    local stepZ  = (nCols > 1) and (availZ / (nCols - 1)) or 0
-    local startZ = -(availZ * 0.5)
-
-    -- 行数
     local nRows = math.max(1, math.floor((yEnd - yStart) / WIN_STEP_Y) + 1)
-    local stepY  = (nRows > 1) and ((yEnd - yStart) / (nRows - 1)) or 0
+    local stepY = (nRows > 1) and ((yEnd - yStart) / (nRows - 1)) or 0
 
-    -- 在 ±X 两个立面上各生成一套窗户
+    -- 决定 Z 分区：有 winZGroups 则按分区，否则全宽单区
+    local zGroups
+    if def.winZGroups then
+        zGroups = def.winZGroups
+    else
+        local margin = 0.9
+        local half = def.spanZ * 0.5 - margin
+        zGroups = {{ zMin = -half, zMax = half }}
+    end
+
     for _, sx in ipairs({-1, 1}) do
-        local faceX = sx * (spanX * 0.5)   -- 面所在 X 平面
+        local faceX = sx * (spanX * 0.5)
 
-        for row = 0, nRows - 1 do
-            local winY = yStart + row * stepY
-            for col = 0, nCols - 1 do
-                local winZ = startZ + col * stepZ
+        for _, zg in ipairs(zGroups) do
+            local groupW = zg.zMax - zg.zMin
+            if groupW < WIN_W then goto continue_group end
 
-                -- 石材窗框（略大，凸出立面）
-                local fn = root:CreateChild("WF")
-                fn:SetPosition(Vector3(
-                    faceX + sx * FRAME_THICK * 0.5,
-                    winY,
-                    winZ))
-                fn:SetScale(Vector3(
-                    FRAME_THICK,
-                    WIN_H + WIN_BORDER * 2,
-                    WIN_W + WIN_BORDER * 2))
-                local sm1 = fn:CreateComponent("StaticModel")
-                sm1:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
-                sm1:SetMaterial(winFrameMat)
+            local nCols = math.max(1, math.floor(groupW / WIN_STEP_Z))
+            local stepZ = (nCols > 1) and ((groupW - WIN_W) / (nCols - 1)) or 0
+            -- 窗格网格在分区内水平居中
+            local startZ = (zg.zMin + zg.zMax) * 0.5 - (nCols - 1) * stepZ * 0.5
 
-                -- 玻璃（深色薄板，略超出框面）
-                local gn = root:CreateChild("WG")
-                gn:SetPosition(Vector3(
-                    faceX + sx * (FRAME_THICK + GLASS_THICK * 0.5),
-                    winY,
-                    winZ))
-                gn:SetScale(Vector3(
-                    GLASS_THICK,
-                    WIN_H,
-                    WIN_W))
-                local sm2 = gn:CreateComponent("StaticModel")
-                sm2:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
-                sm2:SetMaterial(winGlassMat)
+            for row = 0, nRows - 1 do
+                local winY = yStart + row * stepY
+                for col = 0, nCols - 1 do
+                    local winZ = startZ + col * stepZ
+
+                    -- 石材窗框（略大，凸出立面）
+                    local fn = root:CreateChild("WF")
+                    fn:SetPosition(Vector3(
+                        faceX + sx * FRAME_THICK * 0.5,
+                        winY, winZ))
+                    fn:SetScale(Vector3(
+                        FRAME_THICK,
+                        WIN_H + WIN_BORDER * 2,
+                        WIN_W + WIN_BORDER * 2))
+                    local sm1 = fn:CreateComponent("StaticModel")
+                    sm1:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
+                    sm1:SetMaterial(winFrameMat)
+
+                    -- 玻璃（深色薄板）
+                    local gn = root:CreateChild("WG")
+                    gn:SetPosition(Vector3(
+                        faceX + sx * (FRAME_THICK + GLASS_THICK * 0.5),
+                        winY, winZ))
+                    gn:SetScale(Vector3(GLASS_THICK, WIN_H, WIN_W))
+                    local sm2 = gn:CreateComponent("StaticModel")
+                    sm2:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
+                    sm2:SetMaterial(winGlassMat)
+                end
             end
+            ::continue_group::
+        end
+    end
+end
+
+-- ─────────────────────────────────────────────────────────────
+--  幕墙常量（单位：米）
+-- ─────────────────────────────────────────────────────────────
+local CW_GLASS_D   = 0.05   -- 玻璃板厚度
+local CW_BAND_H    = 0.40   -- 横向楼板带高度
+local CW_BAND_D    = 0.14   -- 楼板带凸出玻璃面的深度
+local CW_MULL_W    = 0.24   -- 竖挺宽度
+local CW_MULL_D    = 0.08   -- 竖挺凸出玻璃面深度
+local CW_FLOOR_H   = 3.4    -- 层高（m）
+local CW_MULL_STEP = 2.6    -- 竖挺间距（m）
+
+---@type Material|nil
+local cwGlassMat  = nil
+---@type Material|nil
+local cwConcrMat  = nil
+
+local function EnsureCwMats()
+    if cwGlassMat then return end
+    -- 深黑蓝反射玻璃（高金属度，接近镜面）
+    cwGlassMat = GetMat({ color = {0.04, 0.07, 0.16}, roughness = 0.04, metallic = 0.80 })
+    -- 浅暖灰混凝土格条
+    cwConcrMat = GetMat({ color = {0.72, 0.68, 0.60}, roughness = 0.82, metallic = 0.0  })
+end
+
+--- 在建筑两侧立面（±X 面）上生成玻璃幕墙
+---   · 整面大玻璃板（一个 Z 组一块）
+---   · 每 CW_FLOOR_H 一道横向混凝土楼板带（凸出玻璃面）
+---   · 每 CW_MULL_STEP 一道竖向混凝土竖挺（凸出玻璃面）
+---
+--- 触发条件：def.curtainWall = true
+---
+---@param root   Node
+---@param def    table
+---@param height number
+local function AddCurtainWallToFacade(root, def, height)
+    if not def.curtainWall then return end
+    EnsureCwMats()
+
+    local spanX         = def.spanX
+    local defYFracStart = def.winYStart or 0.03
+    local defYFracEnd   = def.winYEnd   or 0.97
+
+    -- 决定 Z 分区（每组可通过 yFracStart/yFracEnd 覆盖全局值）
+    local zGroups
+    if def.winZGroups then
+        zGroups = def.winZGroups
+    else
+        local margin = 0.5
+        local half = def.spanZ * 0.5 - margin
+        zGroups = {{ zMin = -half, zMax = half }}
+    end
+
+    for _, sx in ipairs({-1, 1}) do
+        local faceX = sx * (spanX * 0.5)   -- 立面 X 坐标（局部）
+
+        for _, zg in ipairs(zGroups) do
+            local groupW = zg.zMax - zg.zMin
+            if groupW < 1.0 then goto cw_next_group end
+            local groupCZ = (zg.zMin + zg.zMax) * 0.5
+
+            -- 每组独立 Y 范围（优先用组内 yFracStart/yFracEnd）
+            local yStart = height * (zg.yFracStart or defYFracStart)
+            local yEnd   = height * (zg.yFracEnd   or defYFracEnd)
+            local totalH = yEnd - yStart
+            if totalH <= 0 then goto cw_next_group end
+            local yCen = yStart + totalH * 0.5
+
+            -- ① 整面玻璃板（thin box，与立面齐平）
+            local gn = root:CreateChild("CwGlass")
+            gn:SetPosition(Vector3(
+                faceX + sx * CW_GLASS_D * 0.5,
+                yCen,
+                groupCZ))
+            gn:SetScale(Vector3(CW_GLASS_D, totalH, groupW))
+            local smg = gn:CreateComponent("StaticModel")
+            smg:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
+            smg:SetMaterial(cwGlassMat)
+
+            -- ② 横向楼板带（每层一道，凸出玻璃面）
+            local nFloors = math.max(1, math.floor(totalH / CW_FLOOR_H))
+            for f = 0, nFloors do
+                local bandY = yStart + f * CW_FLOOR_H
+                if bandY > yEnd + 0.01 then break end
+                local bn = root:CreateChild("CwBand")
+                bn:SetPosition(Vector3(
+                    faceX + sx * (CW_GLASS_D + CW_BAND_D * 0.5),
+                    bandY,
+                    groupCZ))
+                bn:SetScale(Vector3(CW_BAND_D, CW_BAND_H, groupW))
+                local smb = bn:CreateComponent("StaticModel")
+                smb:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
+                smb:SetMaterial(cwConcrMat)
+            end
+
+            -- ③ 竖向竖挺（等间距，凸出玻璃面）
+            local nMulls = math.max(0, math.floor(groupW / CW_MULL_STEP) - 1)
+            if nMulls > 0 then
+                local mullSpacing = groupW / (nMulls + 1)
+                for m = 1, nMulls do
+                    local mz = zg.zMin + m * mullSpacing
+                    local mn = root:CreateChild("CwMull")
+                    mn:SetPosition(Vector3(
+                        faceX + sx * (CW_GLASS_D + CW_MULL_D * 0.5),
+                        yCen,
+                        mz))
+                    mn:SetScale(Vector3(CW_MULL_D, totalH, CW_MULL_W))
+                    local smm = mn:CreateComponent("StaticModel")
+                    smm:SetModel(cache:GetResource("Model", "Models/Box.mdl"))
+                    smm:SetMaterial(cwConcrMat)
+                end
+            end
+
+            ::cw_next_group::
         end
     end
 end
@@ -284,8 +412,12 @@ local function SpawnBuilding(def, height, wx, wz, rotY)
         end
     end
 
-    -- 生成窗户（仅对配置了 addWindows=true 的建筑）
-    AddWindowsToFacade(root, def, height)
+    -- 生成立面装饰：幕墙 或 逐窗网格（二选一）
+    if def.curtainWall then
+        AddCurtainWallToFacade(root, def, height)
+    else
+        AddWindowsToFacade(root, def, height)
+    end
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -334,6 +466,8 @@ local function SpawnForSide(tileIdx, xSign, n)
     local shortDef  = config.types["european_house"]
     local tallDef   = config.types["glass_tower"]
     local palaceDef = config.types["baroque_palace"]
+    local portalDef = config.types["portal_tower"]
+    local ctfDef    = config.types["ctf_tower"]
 
     -- ── 近岸矮楼行 ─────────────────────────────────────────────
     -- 生成间隔由 spanZ 自动计算（europena_house._interval）
@@ -359,28 +493,46 @@ local function SpawnForSide(tileIdx, xSign, n)
 
     -- ── 高楼第一行 ─────────────────────────────────────────────
     -- 间隔由 spanZ 自动计算（glass_tower._interval）
-    local tallInterval = tallDef and tallDef._interval or 3
+    -- portal_tower 作为地标，每 3×自身间隔出现一次（约每 240m）
+    local tallInterval   = tallDef   and tallDef._interval            or 3
+    local portalInterval = portalDef and (portalDef._interval * 3)    or 24
     if tileIdx % tallInterval == 0 then
         LcgSeed(tileIdx * 251 + xSign * 131 + 13)
         local lz2   = RandRange(-2.0, 2.0)
-        local h2    = RandRange(tallDef.heightMin, tallDef.heightMax)
         local offX2 = RandRange(-1.5, 1.5)
         local lx2   = xSign * (TALL_ROW1_X + offX2)
         local wx2, wz2 = LocalToWorld(midX, midZ, heading, lx2, lz2)
-        SpawnBuilding(tallDef, h2, wx2, wz2, heading + RandRange(-4, 4))
+
+        if portalDef and tileIdx % portalInterval == 0 then
+            -- 门形地标高层（固定高度，轻微随机旋转）
+            SpawnBuilding(portalDef, portalDef.heightMin, wx2, wz2,
+                heading + RandRange(-2, 2))
+        else
+            local h2 = RandRange(tallDef.heightMin, tallDef.heightMax)
+            SpawnBuilding(tallDef, h2, wx2, wz2, heading + RandRange(-4, 4))
+        end
     end
 
     -- ── 高楼第二行（错开半个间隔，避免与第一行对齐）──────────────
     -- 偏移 floor(tallInterval/2) 瓦片，让两行高楼交错排列
-    local tallOffset = math.floor(tallInterval * 0.5)
+    -- ctf_tower 作为超高层地标，每 5×自身间隔出现一次（约每 200m）
+    local tallOffset  = math.floor(tallInterval * 0.5)
+    local ctfInterval = ctfDef and (ctfDef._interval * 5) or 20
     if (tileIdx + tallOffset) % tallInterval == 0 then
         LcgSeed(tileIdx * 337 + xSign * 167 + 19)
         local lz3   = RandRange(-2.0, 2.0)
-        local h3    = RandRange(tallDef.heightMin + 15, tallDef.heightMax + 25)
         local offX3 = RandRange(-2.0, 2.0)
         local lx3   = xSign * (TALL_ROW2_X + offX3)
         local wx3, wz3 = LocalToWorld(midX, midZ, heading, lx3, lz3)
-        SpawnBuilding(tallDef, h3, wx3, wz3, heading + RandRange(-4, 4))
+
+        if ctfDef and tileIdx % ctfInterval == 0 then
+            -- 超高层地标：全玻璃幕墙高层（CTF 风格）
+            local h3 = RandRange(ctfDef.heightMin, ctfDef.heightMax)
+            SpawnBuilding(ctfDef, h3, wx3, wz3, heading + RandRange(-2, 2))
+        else
+            local h3 = RandRange(tallDef.heightMin + 15, tallDef.heightMax + 25)
+            SpawnBuilding(tallDef, h3, wx3, wz3, heading + RandRange(-4, 4))
+        end
     end
 end
 
