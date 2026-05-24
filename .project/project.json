@@ -5,7 +5,7 @@
     "id": "771520039"
   },
   "entry": "main.lua",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "taptap_publish": {
     "title": "海河冲刺",
     "description": "天津海河——急速赛艇体验\n\n来到了天津卫，嘛也没学会\n学会了开赛艇，创死了二百多",
@@ -23,28 +23,28 @@
     "icon": "./game_material/ICON_2026-05-24T04-21-14_01.png",
     "screenshots": [
       "./game_material/SCREENSHOT_2026-05-24T04-21-14_01.png",
-      "./game_material/SCREENSHOT_2026-05-24T04-21-14_02.png",
+      "./game_material/SCREENSHOT_2026-05-24T05-52-05_02.png",
       "./game_material/SCREENSHOT_2026-05-24T04-21-14_03.png"
     ],
-    "promotional_image": "./game_material/PROMO_2026-05-24T04-21-14_01.jpg",
+    "promotional_image": "./game_material/PROMO_2026-05-24T05-41-30_01.jpg",
     "icon_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/ICON_2026-05-24T04-21-14_01.png",
     "screenshot_urls": [
       "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/SCREENSHOT_2026-05-24T04-21-14_01.png",
-      "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/SCREENSHOT_2026-05-24T04-21-14_02.png",
+      "https://tapcode-sce.spark.xd.com/assets/game_material/海河冲刺/SCREENSHOT_2026-05-24T05-52-05_02.png",
       "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/SCREENSHOT_2026-05-24T04-21-14_03.png"
     ],
-    "promotional_image_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/PROMO_2026-05-24T04-21-14_01.jpg",
-    "cover_horizontal": "./game_material/COVER_HORIZONTAL_2026-05-24T04-23-39_01.png",
-    "cover_horizontal_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/COVER_HORIZONTAL_2026-05-24T04-23-39_01.png",
-    "cover_vertical": "./game_material/COVER_VERTICAL_2026-05-24T04-26-32_01.png",
-    "cover_vertical_url": "https://tapcode-sce.spark.xd.com/assets/game_material/城市快艇竞速/COVER_VERTICAL_2026-05-24T04-26-32_01.png"
+    "promotional_image_url": "https://tapcode-sce.spark.xd.com/assets/game_material/海河冲刺/PROMO_2026-05-24T05-41-30_01.jpg",
+    "cover_horizontal": "./.project/game_material/COVER_HORIZONTAL_2026-05-24T05-54-53_01.png",
+    "cover_horizontal_url": "https://tapcode-sce.spark.xd.com/assets/game_material/海河冲刺/COVER_HORIZONTAL_2026-05-24T05-54-53_01.png",
+    "cover_vertical": "./.project/game_material/COVER_VERTICAL_2026-05-24T05-54-53_01.png",
+    "cover_vertical_url": "https://tapcode-sce.spark.xd.com/assets/game_material/海河冲刺/COVER_VERTICAL_2026-05-24T05-54-53_01.png"
   },
   "metadata": {
-    "updated_at": "2026-05-24T05:04:25.225Z",
-    "promo_dependent_hash": "d1d64b47912031e71df83d0de04a099e"
+    "updated_at": "2026-05-24T05:57:15.982Z",
+    "promo_dependent_hash": "d4309590e391cb2686dc72f59b361cc9"
   },
   "test_qrcode": {
-    "url": "https://tapcode-sce.spark.xd.com/qrcode/p_9as1_1779599065052.png",
-    "generated_at": "2026-05-24T05:04:25.225Z"
+    "url": "https://tapcode-sce.spark.xd.com/qrcode/p_9as1_1779601988558.png",
+    "generated_at": "2026-05-24T05:53:08.686Z"
   }
 }
