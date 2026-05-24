@@ -28,6 +28,178 @@ return {
         -- ────────────────────────────────────────────────────
         --  古典米黄色高层（spanZ=16m，每 3 瓦片 1 栋 → 30m 间距）
         -- ────────────────────────────────────────────────────
+        --  青绿幕墙细高楼（现代国际风格，偏绿色玻璃）
+        -- ────────────────────────────────────────────────────
+        teal_glass = {
+            tier       = "tall",
+            spanZ      = 14,
+            spanX      = 14,
+            heightMin  = 48,
+            heightMax  = 80,
+            curtainWall = true,
+            winYStart   = 0.02,
+            winYEnd     = 0.96,
+            parts = {
+                -- 主体下段（全幅）
+                { model = "Box",
+                  yBottom = 0.00, yTop = 0.62,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.18, 0.36, 0.40 }, roughness = 0.18, metallic = 0.30,
+                },
+                -- 腰带分段线（略挑出）
+                { model = "Box",
+                  yBottom = 0.60, yTop = 0.63,
+                  xScale = 1.025, zScale = 1.025,
+                  color = { 0.12, 0.20, 0.24 }, roughness = 0.75, metallic = 0.08,
+                },
+                -- 主体上段（内缩）
+                { model = "Box",
+                  yBottom = 0.62, yTop = 0.95,
+                  xScale = 0.85, zScale = 0.85,
+                  color = { 0.18, 0.36, 0.40 }, roughness = 0.18, metallic = 0.30,
+                },
+                -- 顶冠
+                { model = "Box",
+                  yBottom = 0.94, yTop = 1.00,
+                  xScale = 0.42, zScale = 0.42,
+                  color = { 0.14, 0.26, 0.30 }, roughness = 0.38, metallic = 0.42,
+                },
+            },
+        },
+
+        -- ────────────────────────────────────────────────────
+        --  现代主义混凝土办公楼（浅灰，带逐窗网格）
+        -- ────────────────────────────────────────────────────
+        concrete_office = {
+            tier       = "tall",
+            spanZ      = 18,
+            spanX      = 16,
+            heightMin  = 38,
+            heightMax  = 62,
+            addWindows = true,
+            winYStart  = 0.10,
+            winYEnd    = 0.88,
+            parts = {
+                -- 深灰基座
+                { model = "Box",
+                  yBottom = 0.00, yTop = 0.09,
+                  xScale = 1.045, zScale = 1.045,
+                  color = { 0.50, 0.48, 0.45 }, roughness = 0.84, metallic = 0.0,
+                },
+                -- 浅灰混凝土主体
+                { model = "Box",
+                  yBottom = 0.08, yTop = 0.91,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.74, 0.72, 0.68 }, roughness = 0.78, metallic = 0.02,
+                },
+                -- 顶部腰线（挑出）
+                { model = "Box",
+                  yBottom = 0.89, yTop = 0.94,
+                  xScale = 1.035, zScale = 1.035,
+                  color = { 0.50, 0.48, 0.45 }, roughness = 0.82, metallic = 0.0,
+                },
+                -- 机械层顶箱
+                { model = "Box",
+                  yBottom = 0.93, yTop = 1.00,
+                  xScale = 0.78, zScale = 0.78,
+                  color = { 0.58, 0.56, 0.52 }, roughness = 0.80, metallic = 0.0,
+                },
+            },
+        },
+
+        -- ────────────────────────────────────────────────────
+        --  乳白古典比例高层（象牙白石材，带窗格，细挑檐）
+        -- ────────────────────────────────────────────────────
+        ivory_classic = {
+            tier       = "tall",
+            spanZ      = 14,
+            spanX      = 16,
+            heightMin  = 46,
+            heightMax  = 74,
+            addWindows = true,
+            winYStart  = 0.10,
+            winYEnd    = 0.82,
+            parts = {
+                -- 石材基座（深暖米）
+                { model = "Box",
+                  yBottom = 0.00, yTop = 0.10,
+                  xScale = 1.06, zScale = 1.06,
+                  color = { 0.72, 0.66, 0.54 }, roughness = 0.84, metallic = 0.0,
+                },
+                -- 主体（象牙白）
+                { model = "Box",
+                  yBottom = 0.09, yTop = 0.83,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.95, 0.92, 0.84 }, roughness = 0.68, metallic = 0.0,
+                },
+                -- 主檐线脚（挑出）
+                { model = "Box",
+                  yBottom = 0.81, yTop = 0.88,
+                  xScale = 1.08, zScale = 1.08,
+                  color = { 0.82, 0.76, 0.64 }, roughness = 0.76, metallic = 0.0,
+                },
+                -- 顶部阁楼（收窄）
+                { model = "Box",
+                  yBottom = 0.87, yTop = 1.00,
+                  xScale = 0.80, zScale = 0.80,
+                  color = { 0.90, 0.86, 0.76 }, roughness = 0.70, metallic = 0.0,
+                },
+            },
+        },
+
+        -- ────────────────────────────────────────────────────
+        --  深色台阶幕墙楼（暖碳灰，三段退台，铜色感）
+        -- ────────────────────────────────────────────────────
+        dark_step = {
+            tier       = "tall",
+            spanZ      = 16,
+            spanX      = 18,
+            heightMin  = 55,
+            heightMax  = 85,
+            curtainWall = true,
+            winYStart   = 0.01,
+            winYEnd     = 0.97,
+            parts = {
+                -- 下段（全幅，深暖灰）
+                { model = "Box",
+                  yBottom = 0.00, yTop = 0.50,
+                  xScale = 1.00, zScale = 1.00,
+                  color = { 0.36, 0.32, 0.28 }, roughness = 0.30, metallic = 0.22,
+                },
+                -- 腰线
+                { model = "Box",
+                  yBottom = 0.48, yTop = 0.52,
+                  xScale = 1.02, zScale = 1.02,
+                  color = { 0.22, 0.20, 0.17 }, roughness = 0.72, metallic = 0.08,
+                },
+                -- 中段（内缩）
+                { model = "Box",
+                  yBottom = 0.50, yTop = 0.78,
+                  xScale = 0.86, zScale = 0.86,
+                  color = { 0.36, 0.32, 0.28 }, roughness = 0.30, metallic = 0.22,
+                },
+                -- 腰线 2
+                { model = "Box",
+                  yBottom = 0.76, yTop = 0.80,
+                  xScale = 0.88, zScale = 0.88,
+                  color = { 0.22, 0.20, 0.17 }, roughness = 0.72, metallic = 0.08,
+                },
+                -- 上段（再收缩）
+                { model = "Box",
+                  yBottom = 0.78, yTop = 0.97,
+                  xScale = 0.68, zScale = 0.68,
+                  color = { 0.36, 0.32, 0.28 }, roughness = 0.30, metallic = 0.22,
+                },
+                -- 顶冠
+                { model = "Box",
+                  yBottom = 0.96, yTop = 1.00,
+                  xScale = 0.32, zScale = 0.32,
+                  color = { 0.28, 0.24, 0.20 }, roughness = 0.45, metallic = 0.35,
+                },
+            },
+        },
+
+        -- ────────────────────────────────────────────────────
         glass_tower = {
             tier      = "tall",
             spanZ     = 16,

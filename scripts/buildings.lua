@@ -464,14 +464,33 @@ local function SpawnForSide(tileIdx, xSign, n)
     local midZ    = n.midZ
 
     local shortDef  = config.types["european_house"]
-    local tallDef   = config.types["glass_tower"]
+    local tallDef   = config.types["glass_tower"]   -- 用作间隔基准
     local palaceDef = config.types["baroque_palace"]
     local portalDef = config.types["portal_tower"]
     local ctfDef    = config.types["ctf_tower"]
 
+    -- ── 普通高楼随机池（不含地标）────────────────────────────────
+    -- 按权重排列：同一类型出现多次 = 更高概率
+    local tallPool = {}
+    for _, k in ipairs({
+        "glass_tower",    "glass_tower",      -- 米黄古典  × 2
+        "ivory_classic",  "ivory_classic",    -- 象牙白    × 2
+        "concrete_office","concrete_office",  -- 混凝土灰  × 2
+        "teal_glass",                         -- 青绿幕墙  × 1
+        "dark_step",                          -- 暖碳灰退台× 1
+    }) do
+        local d = config.types[k]
+        if d then tallPool[#tallPool + 1] = d end
+    end
+    local poolSize = #tallPool
+
+    -- 用当前 LCG 随机值从池中抽取一种高层
+    local function PickTall()
+        local idx = math.floor(LcgRand() * poolSize) + 1
+        return tallPool[math.max(1, math.min(poolSize, idx))]
+    end
+
     -- ── 近岸矮楼行 ─────────────────────────────────────────────
-    -- 生成间隔由 spanZ 自动计算（europena_house._interval）
-    -- baroque_palace 的间隔同样由其 spanZ 计算，叠加在矮楼行里出现
     local shortInterval  = shortDef  and shortDef._interval  or 2
     local palaceInterval = palaceDef and palaceDef._interval or 5
     if tileIdx % shortInterval == 0 then
@@ -482,7 +501,6 @@ local function SpawnForSide(tileIdx, xSign, n)
         local wx1, wz1 = LocalToWorld(midX, midZ, heading, lx1, lz1)
 
         if palaceDef and tileIdx % palaceInterval == 0 then
-            -- 地标建筑：宫殿（自身间隔保证不重叠）
             SpawnBuilding(palaceDef, palaceDef.heightMin, wx1, wz1,
                 heading + RandRange(-3, 3))
         else
@@ -492,10 +510,9 @@ local function SpawnForSide(tileIdx, xSign, n)
     end
 
     -- ── 高楼第一行 ─────────────────────────────────────────────
-    -- 间隔由 spanZ 自动计算（glass_tower._interval）
-    -- portal_tower 作为地标，每 3×自身间隔出现一次（约每 240m）
-    local tallInterval   = tallDef   and tallDef._interval            or 3
-    local portalInterval = portalDef and (portalDef._interval * 3)    or 24
+    -- portal_tower 作为门形地标，每 3×自身间隔出现一次（约每 240m）
+    local tallInterval   = tallDef   and tallDef._interval         or 3
+    local portalInterval = portalDef and (portalDef._interval * 3) or 24
     if tileIdx % tallInterval == 0 then
         LcgSeed(tileIdx * 251 + xSign * 131 + 13)
         local lz2   = RandRange(-2.0, 2.0)
@@ -504,17 +521,16 @@ local function SpawnForSide(tileIdx, xSign, n)
         local wx2, wz2 = LocalToWorld(midX, midZ, heading, lx2, lz2)
 
         if portalDef and tileIdx % portalInterval == 0 then
-            -- 门形地标高层（固定高度，轻微随机旋转）
             SpawnBuilding(portalDef, portalDef.heightMin, wx2, wz2,
                 heading + RandRange(-2, 2))
         else
-            local h2 = RandRange(tallDef.heightMin, tallDef.heightMax)
-            SpawnBuilding(tallDef, h2, wx2, wz2, heading + RandRange(-4, 4))
+            local picked2 = PickTall()
+            local h2 = RandRange(picked2.heightMin, picked2.heightMax)
+            SpawnBuilding(picked2, h2, wx2, wz2, heading + RandRange(-4, 4))
         end
     end
 
     -- ── 高楼第二行（错开半个间隔，避免与第一行对齐）──────────────
-    -- 偏移 floor(tallInterval/2) 瓦片，让两行高楼交错排列
     -- ctf_tower 作为超高层地标，每 5×自身间隔出现一次（约每 200m）
     local tallOffset  = math.floor(tallInterval * 0.5)
     local ctfInterval = ctfDef and (ctfDef._interval * 5) or 20
@@ -526,12 +542,13 @@ local function SpawnForSide(tileIdx, xSign, n)
         local wx3, wz3 = LocalToWorld(midX, midZ, heading, lx3, lz3)
 
         if ctfDef and tileIdx % ctfInterval == 0 then
-            -- 超高层地标：全玻璃幕墙高层（CTF 风格）
             local h3 = RandRange(ctfDef.heightMin, ctfDef.heightMax)
             SpawnBuilding(ctfDef, h3, wx3, wz3, heading + RandRange(-2, 2))
         else
-            local h3 = RandRange(tallDef.heightMin + 15, tallDef.heightMax + 25)
-            SpawnBuilding(tallDef, h3, wx3, wz3, heading + RandRange(-4, 4))
+            local picked3 = PickTall()
+            -- 第二行整体再加高一档，拉出天际线层次感
+            local h3 = RandRange(picked3.heightMin + 12, picked3.heightMax + 22)
+            SpawnBuilding(picked3, h3, wx3, wz3, heading + RandRange(-4, 4))
         end
     end
 end
