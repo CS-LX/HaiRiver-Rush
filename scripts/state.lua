@@ -15,6 +15,11 @@ local S = {
     boatPosX    = 0.0,
     boatPosY    = C.BOAT_BASE_Y,
     boatPosZ    = 0.0,
+
+    -- ── 跳跃状态 ──────────────────────────────────────────
+    isJumping   = false,        -- 是否正在空中
+    jumpVY      = 0.0,          -- 当前垂直速度（m/s）
+    boatY       = C.BOAT_BASE_Y, -- 当前 Y 轴世界高度
     boatHeading       = 0.0,    -- 偏航角（度），0 = +Z 方向
     boatTargetHeading = 0.0,    -- 碰墙后的目标偏航（船平滑转向这里）
     boatTiltZ   = 0.0,          -- 视觉侧倾角

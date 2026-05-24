@@ -204,7 +204,7 @@ function M.Init()
     -- ── 动态刚体（物理引擎驱动移动，碰墙由 NodeCollision 处理） ──
     local rb = S.boatNode:CreateComponent("RigidBody")
     rb:SetMass(80.0)
-    rb:SetLinearFactor(Vector3(1, 0, 1))   -- 锁 Y 轴移动
+    rb:SetLinearFactor(Vector3(1, 0, 1))   -- 默认锁 Y 轴；跳跃时在 Update 中手动控制 Y
     rb:SetAngularFactor(Vector3(0, 0, 0))  -- 锁所有旋转
     rb:SetLinearDamping(0.05)
     rb:SetRestitution(0.15)
@@ -241,6 +241,15 @@ function M.ReturnCenter(dt)
 end
 
 -- ─────────────────────────────────────────────────────────────
+--  跳跃：外部调用触发起跳
+-- ─────────────────────────────────────────────────────────────
+function M.Jump()
+    if S.isJumping then return end
+    S.isJumping = true
+    S.jumpVY    = C.JUMP_VY
+end
+
+-- ─────────────────────────────────────────────────────────────
 --  每帧更新：SetLinearVelocity 驱动，物理引擎处理墙壁碰撞
 -- ─────────────────────────────────────────────────────────────
 function M.Update(dt)
@@ -250,6 +259,19 @@ function M.Update(dt)
         local maxStep = C.HIT_TURN_SPEED * dt
         local step    = math.max(-maxStep, math.min(maxStep, diff))
         S.boatHeading = S.boatHeading + step
+    end
+
+    -- ── 跳跃物理（手动控制 Y，不依赖刚体 Y 轴） ───────────────
+    if S.isJumping then
+        S.jumpVY = S.jumpVY - C.JUMP_GRAVITY * dt
+        S.boatY  = S.boatY + S.jumpVY * dt
+        if S.boatY <= C.BOAT_BASE_Y then
+            S.boatY    = C.BOAT_BASE_Y
+            S.jumpVY   = 0.0
+            S.isJumping = false
+        end
+    else
+        S.boatY = C.BOAT_BASE_Y
     end
 
     -- ── 物理速度驱动 ─────────────────────────────────────────
@@ -263,14 +285,16 @@ function M.Update(dt)
         ))
     end
 
-    -- 读回物理位置
+    -- 读回物理位置，并手动覆盖 Y
     local pos  = S.boatNode:GetWorldPosition()
     S.boatPosX = pos.x
     S.boatPosZ = pos.z
+    S.boatNode:SetWorldPosition(Vector3(pos.x, S.boatY, pos.z))
 
-    -- 朝向由代码控制
+    -- 朝向由代码控制；跳跃时船头略微仰起
     S.boatNode:SetWorldRotation(Quaternion(0, S.boatHeading, 0))
-    S.boatVisNode:SetRotation(Quaternion(0, 0, S.boatTiltZ))
+    local pitchAngle = S.isJumping and math.max(-25, S.jumpVY * -1.8) or 0
+    S.boatVisNode:SetRotation(Quaternion(pitchAngle, 0, S.boatTiltZ))
 
     -- ── 螺旋桨旋转（速度正比于油门）─────────────────────────
     if propNode then
@@ -292,6 +316,9 @@ function M.Reset()
     S.boatPosX          = 0.0
     S.boatPosY          = C.BOAT_BASE_Y
     S.boatPosZ          = 0.0
+    S.boatY             = C.BOAT_BASE_Y
+    S.isJumping         = false
+    S.jumpVY            = 0.0
     S.boatHeading       = 0.0
     S.boatTargetHeading = 0.0
     S.boatTiltZ         = 0.0

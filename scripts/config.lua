@@ -6,7 +6,7 @@ local M = {}
 -- 船速
 M.SPEED_INIT      = 16.0
 M.SPEED_MIN       = 4.0        -- 油门归零时的最低惰行速度
-M.SPEED_MAX       = 55.0
+M.SPEED_MAX       = 82.5   -- 原 55.0 × 1.5
 
 -- 油门系统
 M.THROTTLE_STEP   = 0.6        -- 每秒 W/S 改变油门的量（0-1 区间）
@@ -62,5 +62,11 @@ M.DMG_GAMEBOAT    = 0.22     -- 撞游船扣量
 M.DUR_REGEN       = 0.008    -- 每秒回复量（低油门时生效）
 M.DUR_REGEN_THR   = 0.50     -- 油门低于此值才回血
 M.OBS_HIT_CD      = 0.8      -- 障碍物碰撞冷却（秒）
+
+-- 跳跃
+M.JUMP_VY         = 9.0      -- 起跳初速度（m/s）
+M.JUMP_GRAVITY    = 22.0     -- 跳跃重力加速度（m/s²）
+M.JUMP_MIN_Y      = 1.8      -- 超过此高度才能跳过游船（m）
+M.JUMP_SHORE_Y    = 0.5      -- 超过此高度且落在岸上判定撞岸（m）
 
 return M

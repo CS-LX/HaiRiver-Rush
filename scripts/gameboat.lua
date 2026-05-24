@@ -375,11 +375,13 @@ function M.Update(dt)
         else
             local p = node:GetWorldPosition()
 
-            -- ── 碰撞检测（AABB） ──────────────────────────────
+            -- ── 碰撞检测（AABB；空中跳过游船则免疫） ────────────
             if not e.blasted then
                 local dx = math.abs(bp.x - p.x)
                 local dz = math.abs(bp.z - p.z)
-                if dx < HIT_HW and dz < HIT_HL then
+                -- 玩家飞过游船顶部（约 2.5m 高）时免疫碰撞
+                local boatAbove = S.boatY >= C.JUMP_MIN_Y
+                if dx < HIT_HW and dz < HIT_HL and not boatAbove then
                     if (now - lastHitTime) >= HIT_CD then
                         lastHitTime = now
                         if TakeDurabilityHit then TakeDurabilityHit("gameboat") end

@@ -56,7 +56,7 @@ local function CreateHUD(root)
 
     hudRoot:SetVisible(false)
 
-    S.hintText = Txt(root, "♿ A/D 转向  W 加速  S 刹车 ♿",
+    S.hintText = Txt(root, "♿ A/D 转向  W 加速  S 刹车  空格/E 跳跃 ♿",
                      18, 1.0, 1.0, 0.5, 1, HA_CENTER, VA_BOTTOM, 0, -28)
     S.hintText:SetVisible(false)
 end
@@ -87,8 +87,10 @@ local function CreateStartScreen(root)
     Txt(startRoot, "D / 右方向键    向右转", 17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 56)
     Txt(startRoot, "W / 上方向键    加速",   17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 80)
     Txt(startRoot, "S / 下方向键    刹车",   17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 104)
+    Txt(startRoot, "空格 / E        跳跃（可跳过游船）",
+                                             17, 0.85, 0.95, 1.0, 0.9, HA_CENTER, VA_TOP, 0, tipY + 128)
     Txt(startRoot, "手机：屏幕四角虚拟按键控制方向/油门",
-                                             16, 0.75, 0.88, 1.0, 0.7, HA_CENTER, VA_TOP, 0, tipY + 132)
+                                             16, 0.75, 0.88, 1.0, 0.7, HA_CENTER, VA_TOP, 0, tipY + 156)
 
     S.startPrompt = Txt(startRoot, "♿  点击任意处开始游戏  ♿",
                         24, 0.25, 1.0, 0.55, 1, HA_CENTER, VA_BOTTOM, 0,

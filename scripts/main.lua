@@ -137,6 +137,11 @@ local function HandleKeyboard(dt)
     if input:GetKeyDown(KEY_S) or input:GetKeyDown(KEY_DOWN) or TouchControls.IsBrakePressed() then
         S.throttle = math.max(0.0, S.throttle - C.THROTTLE_STEP * dt)
     end
+
+    -- 跳跃：空格键 / E 键
+    if input:GetKeyPress(KEY_SPACE) or input:GetKeyPress(KEY_E) then
+        Boat.Jump()
+    end
 end
 
 -- ─────────────────────────────────────────────────────────────
@@ -253,7 +258,31 @@ function HandleUpdate(eventType, eventData)
         S.durability = math.min(1.0, S.durability + C.DUR_REGEN * dt)
     end
 
+    -- 跳跃落地检测（落地瞬间判断是否在岸上）
+    local wasJumping = S.isJumping
+
     Boat.Update(dt)
+
+    -- 若本帧刚落地，检查是否落在河道外
+    if wasJumping and not S.isJumping then
+        local node = Track.GetNearestNode(S.boatPosX, S.boatPosZ)
+        if node then
+            local rad    = math.rad(node.heading)
+            local rightX =  math.cos(rad)
+            local rightZ = -math.sin(rad)
+            local dx     = S.boatPosX - node.x
+            local dz     = S.boatPosZ - node.z
+            local lateral = dx * rightX + dz * rightZ   -- 横向偏移（正=右，负=左）
+            if math.abs(lateral) > C.TRACK_WIDTH * 0.5 then
+                -- 落在岸上，立即失败
+                U.LogInfo(string.format("[Jump] 落岸！横向偏移=%.1fm，耐久归零", lateral))
+                S.durability = 0
+                S.gameState  = "gameover"
+                UI.ShowGameOver()
+            end
+        end
+    end
+
     Particles.Update(dt)
     Camera.Update(dt)
     Track.Update(S.boatPosX, S.boatPosZ)
